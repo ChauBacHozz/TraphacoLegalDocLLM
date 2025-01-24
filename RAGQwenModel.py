@@ -14,7 +14,7 @@ class RAGQwen():
                  model_file = "AITeamVN/Vi-Qwen2-7B-RAG",
                  ):
         self.vector_db_path = vector_db_path
-
+        self.model_file = model_file
         # Initialize the embedding model
         self.embedding_model = GPT4AllEmbeddings(model_file=embedding_model_file)
 
@@ -73,3 +73,28 @@ class RAGQwen():
         db = self.read_vectors_db()
         results = db.similarity_search(query, k=k)
         return [result.page_content for result in results]
+    
+    def rag_answer(self, prompt):
+        context_list = self.search_vector_db(prompt, k = 50)
+        context = "\n".join(context_list)
+        conversation = [{"role": "system", "content": self.system_prompt }]
+        conversation.append({"role": "user", "content": self.template.format(context = context, question = prompt)})
+        with torch.inference_mode():
+            text = self.tokenizer.apply_chat_template(
+                conversation,
+                tokenize=False,
+                add_generation_prompt=True)
+            model_inputs = self.tokenizer(text,return_tensors="pt").to(self.model.device)
+
+            generated_ids = self.model.generate(
+                model_inputs.input_ids,
+                max_new_tokens=2048,
+                temperature = 0.5,
+                #top_p=0.95,
+                #top_k=40,
+            )
+            generated_ids = [
+                output_ids[len(input_ids):] for input_ids, output_ids in zip(model_inputs.input_ids, generated_ids)
+            ]
+            response = self.tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
+            return response
