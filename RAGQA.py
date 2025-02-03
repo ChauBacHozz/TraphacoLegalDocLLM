@@ -28,7 +28,7 @@ def search_query(query: str, k: int = 30):
 
 
 from transformers import AutoTokenizer, pipeline, GenerationConfig
-from ipex_llm.transformers import AutoModelForCausalLM
+from transformers import AutoModelForCausalLM
 from langchain_community.embeddings import GPT4AllEmbeddings
 from langchain_community.vectorstores import FAISS
 from transformers import BitsAndBytesConfig
@@ -53,7 +53,7 @@ def load_huggingface_model(model_file):
     # )
     # quantization_config = BitsAndBytesConfig(load_in_8bit=True, llm_int8_threshold = 6.0)
     model = AutoModelForCausalLM.from_pretrained(model_file, cpu_embedding=True, trust_remote_code=True, load_in_4bit = True)
-    model = model.to('xpu')
+    # model = model.to('xpu')
     tokenizer = AutoTokenizer.from_pretrained(model_file, trust_remote_code=True)
     print('Successfully loaded Tokenizer and optimized Model!')
     return model, tokenizer
@@ -102,7 +102,7 @@ with torch.inference_mode():
         conversation,
         tokenize=False,
         add_generation_prompt=True)
-    model_inputs = tokenizer(text,return_tensors="pt").to('xpu')
+    model_inputs = tokenizer(text,return_tensors="pt").to('gpu')
     attention_mask = model_inputs["attention_mask"]
     _ = model.generate(model_inputs.input_ids,
                         do_sample=False,
@@ -113,7 +113,7 @@ with torch.inference_mode():
         attention_mask=attention_mask,
         max_new_tokens=1000,
         generation_config=generation_config,
-        temperature = 0.5,
+        temperature = 0.2,
         #top_p=0.95,
         #top_k=40,
     ).cpu()

@@ -13,6 +13,7 @@ class RAGQwen():
                  embedding_model_file = "models/all-MiniLM-L6-v2-f16.gguf",
                  model_file = "AITeamVN/Vi-Qwen2-7B-RAG",
                  ):
+        
         self.vector_db_path = vector_db_path
         self.model_file = model_file
         # Initialize the embedding model
@@ -75,8 +76,10 @@ class RAGQwen():
         return [result.page_content for result in results]
     
     def rag_answer(self, prompt):
-        context_list = self.search_vector_db(prompt, k = 50)
+        context_list = self.search_vector_db(prompt, k = 5)
         context = "\n".join(context_list)
+        print("\n\n\nCONTEXT:", context)
+        print("\n\n")
         conversation = [{"role": "system", "content": self.system_prompt }]
         conversation.append({"role": "user", "content": self.template.format(context = context, question = prompt)})
         with torch.inference_mode():
@@ -89,7 +92,7 @@ class RAGQwen():
             generated_ids = self.model.generate(
                 model_inputs.input_ids,
                 max_new_tokens=2048,
-                temperature = 0.5,
+                temperature = 0.1,
                 #top_p=0.95,
                 #top_k=40,
             )
