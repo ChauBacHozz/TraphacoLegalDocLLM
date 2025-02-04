@@ -92,7 +92,6 @@ print("FAISS index and metadata loaded successfully!")
 def query_faiss(query, top_k=5):
     query_embedding = embedding_model.embed_query(query)  # Fix: Use embed_query instead of encode
     query_embedding = np.array(query_embedding).reshape(1, -1)  
-    ic(query_embedding)
     distances, indices = index.search(query_embedding, top_k)
     results = []
     for idx, dist in zip(indices[0], distances[0]):
@@ -105,10 +104,10 @@ def query_faiss(query, top_k=5):
 model, tokenizer = load_huggingface_model(model_file)
 
 
-system_prompt = "Bạn là một trợ lí Tiếng Việt nhiệt tình và trung thực. Hãy luôn trả lời một cách hữu ích nhất có thể."
+system_prompt = "Bạn là một trợ lí Tiếng Việt và một chuyên gia về luật dược nhiệt tình và trung thực. Hãy luôn trả lời một cách hữu ích nhất có thể."
 template = '''Chú ý các yêu cầu sau:
 - Câu trả lời phải chính xác và đầy đủ nếu ngữ cảnh có câu trả lời. 
-- Chỉ sử dụng các thông tin có trong ngữ cảnh được cung cấp.
+- Chỉ sử dụng các thông tin có trong ngữ cảnh được cung cấp. 
 - Chỉ cần từ chối trả lời và không suy luận gì thêm nếu ngữ cảnh không có câu trả lời.
 Hãy trả lời câu hỏi dựa trên ngữ cảnh:
 ### Ngữ cảnh :
@@ -123,11 +122,12 @@ Hãy trả lời câu hỏi dựa trên ngữ cảnh:
 
 
 
-question = '''Quy định chi tiết về hồ sơ đề nghị cấp Chứng chỉ hành nghề dược?'''
-context_list = query_faiss(question, top_k = 3)
+question = '''Thời hạn cấp chứng chỉ hành nghề dược là bao nhiêu, trả lời một cách chi tiết và đầy đủ nhất?'''
+context_list = query_faiss(question, top_k = 10)
 print("\n\n\nContext:")
-print("\n\n")
 ic(context_list)
+print("\n\n")
+# scores = [context["scores"] for context in context_list]
 context_list = [context["text"] for context in context_list]
 context = "\n".join(context_list)
 conversation = [{"role": "system", "content": system_prompt }]
