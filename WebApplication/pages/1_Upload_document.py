@@ -7,7 +7,7 @@ from backend.preprocess_docx import (extract_text, normalize_bullets,
                                      convert_text_list_to_tree, flatten_tree,
                                      preprocess_chunks)
 from backend.save_doc_to_db import save_to_db
-
+from icecream import ic
 
 EMBEDDING_MODEL_NAME = "dangvantuan/vietnamese-document-embedding"
 st.set_page_config(page_title="Upload document", page_icon="📈")
@@ -46,5 +46,9 @@ if st.button("Upload to database"):
         # Extract 'text' atribute from preprocessed_chunks
         texts = [chunk['text'] for chunk in preprocessed_chunks]
 
-        save_to_db(texts, embedding_model)
+        metadata_lst = []
+        for chunk in preprocessed_chunks:
+            chunk.pop("text")
+            metadata_lst.append(chunk)
+        save_to_db(texts, metadata_lst, embedding_model)
         st.toast(f"Saved {upload_file.name} database✅")
