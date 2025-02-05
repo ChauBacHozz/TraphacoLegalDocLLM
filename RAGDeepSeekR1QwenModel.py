@@ -12,7 +12,7 @@ import faiss
 import numpy as np
 import pickle
 
-class RAGQwen():
+class RAGDeepSeekQwen():
     def __init__(self, vector_db_path = "vectorstores/db_faiss", 
                  embedding_model_file = 'dangvantuan/vietnamese-document-embedding',
                  model_file = "AITeamVN/Vi-Qwen2-7B-RAG",
