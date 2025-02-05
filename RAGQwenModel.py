@@ -125,8 +125,8 @@ class RAGQwen():
     def rag_answer(self, prompt):
         context_list = self.search_query(prompt)
         context = "\n".join(context_list)
-        print("\n\n\nCONTEXT:", context)
-        print("\n\n")
+        # print("\n\n\nCONTEXT:", context)
+        # print("\n\n")
         conversation = [{"role": "system", "content": self.system_prompt }]
         conversation.append({"role": "user", "content": self.template.format(context = context, question = prompt)})
         with torch.inference_mode():
