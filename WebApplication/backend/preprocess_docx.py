@@ -94,7 +94,6 @@ def convert_text_list_to_tree(text_list):
                 else:
                     for j in range(i):
                         k = k[next(reversed(k))]
-                        print(k)
                     k[par] = OrderedDict()
     for i, para in enumerate(text_list):
         first_token = para.split(" ")[0]
@@ -149,5 +148,5 @@ def preprocess_chunks(chunks):
             })
         else:
             # Handle unmatched chunks (log for review)
-            print(f"Warning: Could not process chunk: {chunk}")
+            print;(f"Warning: Could not process chunk: {chunk}")
     return processed_chunks
