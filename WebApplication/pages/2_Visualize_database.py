@@ -12,14 +12,18 @@ st.write(
 )
 
 FAISS_INDEX_PATH = "db/faiss_index.bin"
+DATA_PATH = "db/data.pkl"
 METADATA_PATH = "db/metadata.pkl"
 
-# Load FAISS index and metadata if they exist, otherwise initialize
-if os.path.exists(FAISS_INDEX_PATH) and os.path.exists(METADATA_PATH):
-    print("🔄 Loading existing FAISS index and metadata...")
+# Load FAISS index, data and metadata if they exist, otherwise initialize
+if os.path.exists(FAISS_INDEX_PATH) and os.path.exists(METADATA_PATH) and os.path.exists(DATA_PATH):
+    print("🔄 Loading existing FAISS index, data and metadata...")
     index = faiss.read_index(FAISS_INDEX_PATH)
     with open(METADATA_PATH, "rb") as f:
         metadata = pickle.load(f)
-        print(metadata)
+    with open(DATA_PATH, "rb") as f:
+        data = pickle.load(f)
 else:
-    st.write("Database is not created yet 😅!!!")
+    print("Database is not created")
+
+
