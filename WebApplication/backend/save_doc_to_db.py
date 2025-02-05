@@ -2,8 +2,9 @@
 import faiss
 import pickle
 import os
+from icecream import ic
 
-def save_to_db(new_texts, metadata, model):
+def save_to_db(new_texts, new_metadata, model):
     # Paths for FAISS index and metadata
     FAISS_INDEX_PATH = "db/faiss_index.bin"
     DATA_PATH = "db/data.pkl"
@@ -53,13 +54,14 @@ def save_to_db(new_texts, metadata, model):
     data.extend(new_texts)
 
     # Append new data
-    metadata.extend(metadata)
+    metadata.extend(new_metadata)
 
     # Save the updated FAISS index and metadata
     save_faiss_and_metadata(index, data, metadata)
 
     # Verify update
-    index, metadata = load_or_initialize_faiss()
+    index, data, metadata = load_or_initialize_faiss()
     print(f"📌 Updated FAISS Index: {index.ntotal} entries")
+    print(f"📌 Updated Data: {len(data)} entries")
     print(f"📌 Updated Metadata: {len(metadata)} entries")
 
