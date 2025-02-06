@@ -33,6 +33,11 @@ if st.button("Upload to database"):
         doc_file = docx.Document(upload_file)
         # Extract text from doc
         extracted_text = extract_text(doc_file)
+
+        doc_number = doc_file.tables[0].rows[1].cells[0].text
+        heading = ": ".join(extracted_text[:2])
+        heading = heading + " | " + doc_number
+        print("Heading:", heading)
         # Merge bullet from extracted text
         full_text = normalize_bullets(extracted_text)
         # Convert text list to tree base to manage content 
@@ -54,3 +59,4 @@ if st.button("Upload to database"):
 
         
         st.toast(f"Saved {upload_file.name} database✅")
+
