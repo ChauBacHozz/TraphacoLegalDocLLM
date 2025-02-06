@@ -1,6 +1,7 @@
 import string
 import re
 from collections import OrderedDict
+from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 
 seps = '[.,;-+]'
 ascii = string.ascii_lowercase
@@ -13,9 +14,15 @@ bullet_levels2 = [["chương"], ["phụ lục"], digit_lst, alphabet_lst]
 
 def extract_text(doc):
     extracted_text = []
+    appendix_index = None
+    temp_idx = 0
     for para in doc.paragraphs:
-        extracted_text.append(para.text)
-    return extracted_text
+        if para.text != "\xa0":
+            extracted_text.append(para.text)
+            temp_idx += 1
+        if para.alignment == WD_PARAGRAPH_ALIGNMENT.CENTER and "phụ lục" in para.text.lower() and appendix_index == None:
+            appendix_index = temp_idx
+    return extracted_text, appendix_index
 
 def normalize_bullets(extract_text):
     alphabet_lst = [i for i in ascii]
