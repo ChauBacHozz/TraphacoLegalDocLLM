@@ -41,9 +41,12 @@ if st.button("Upload to database"):
         heading = ": ".join(extracted_text[:2])
         heading = heading + " | " + doc_number
         if "nghị định" in heading.lower() or "thông tư" in heading.lower():
-            print("Type 1")
-        else:
-            print(heading)
+            print("Nghị định hoặc thông tư")
+        if "luật" in heading.lower():
+            if "sửa đổi" in heading.lower():
+                print("Luật sử đổi bổ sung")
+            else:
+                print("Luật gốc")
 
         # Merge bullet from extracted text
         full_text = normalize_bullets(extracted_text)
