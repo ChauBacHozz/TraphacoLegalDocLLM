@@ -61,7 +61,6 @@ def save_type1_to_db(extracted_text, heading, embedding_model):
     # chunks = [f"{path}: {text}" for path, text in flattened_tree]
     # Preprocess chunks
     preprocessed_chunks = preprocess_chunks(chunks, heading)
-    ic(preprocessed_chunks[:3])
     # Extract 'text' atribute from preprocessed_chunks
     texts = [chunk['text'] for chunk in preprocessed_chunks]
     metadata_lst = []
@@ -88,6 +87,7 @@ if st.button("Upload to database"):
         # Type 1
         if "nghị định" in heading.lower() or "thông tư" in heading.lower():
             print("Nghị định hoặc thông tư")
+            print(embedding_model)
             save_type1_to_db(extracted_text, heading, embedding_model)
 
         elif "luật" in heading.lower():

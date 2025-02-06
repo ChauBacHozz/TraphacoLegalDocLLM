@@ -21,14 +21,12 @@ class RAGQwen():
         self.vector_db_path = vector_db_path
         self.model_file = model_file
         # Initialize the embedding model
-        if embedding_model == None:
-            self.embedding_model = SentenceTransformer('dangvantuan/vietnamese-document-embedding', trust_remote_code=True)
-        else:
-            print("Founded existing embedding model")
-            self.embedding_model = embedding_model
-        self.index, self.loaded_data = self.load_faiss_and_data("db/faiss_index.bin", "db/data.pkl")
-        self.texts = [data for data in self.loaded_data]
-        self.tokenized_docs = [doc.split() for doc in self.texts]
+        # if embedding_model == None:
+        self.embedding_model = SentenceTransformer('dangvantuan/vietnamese-document-embedding', trust_remote_code=True, device="cpu")
+        # else:
+        #     print("Founded existing embedding model")
+        #     self.embedding_model = embedding_model
+
 
         # Load the FAISS vector database with the embedding model
         # self.db = FAISS.load_local(folder_path=vector_db_path, embeddings=self.embedding_model, allow_dangerous_deserialization = True)
@@ -56,6 +54,10 @@ class RAGQwen():
         with open(metadata_path, "rb") as f:
             data = pickle.load(f)
         return index, data
+    def get_model_ready(self):
+        self.index, self.loaded_data = self.load_faiss_and_data("db/faiss_index.bin", "db/data.pkl")
+        self.texts = [data for data in self.loaded_data]
+        self.tokenized_docs = [doc.split() for doc in self.texts]
     def search_query(self, query: str):
         """
         Perform a similarity search on the vector database.

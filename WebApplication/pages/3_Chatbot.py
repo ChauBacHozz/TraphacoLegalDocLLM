@@ -12,6 +12,7 @@ st.title("Legal chatbot LLM")
 #     rag_model = get_model()
 if "rag_model" in st.session_state:
     rag_model = st.session_state.rag_model
+    rag_model.get_model_ready()
 else:
     st.write("No data found in session state.")
 
