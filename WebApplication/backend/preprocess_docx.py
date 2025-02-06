@@ -110,7 +110,7 @@ def flatten_tree(tree, parent_path="", separator=" > "):
             flat_list.append((current_path, ""))
     return flat_list
 
-def preprocess_chunks(chunks):
+def preprocess_chunks(chunks, heading):
     """
     Process raw chunks into a structured format with chapter, section, article, and content.
     """
@@ -131,11 +131,12 @@ def preprocess_chunks(chunks):
         # break
 
             # Combine hierarchical info with content for embedding
-            combined_text = f"{chapter} > {section if section else ''} > {article}. {content}".strip()
+            combined_text = f"{heading} > {chapter} > {section if section else ''} > {article}. {content}".strip()
 
             # Append structured data
             processed_chunks.append({
                 "id": idx + 1,          # Unique ID for each chunk
+                "heading": heading,     # Document heading
                 "chapter": chapter,     # Chapter name
                 "section": section,     # Section name (if any)
                 "article": article,     # Article name
