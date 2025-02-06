@@ -14,8 +14,7 @@ bullet_levels2 = [["chương"], ["phụ lục"], digit_lst, alphabet_lst]
 def extract_text(doc):
     extracted_text = []
     for para in doc.paragraphs:
-        if len(para.text.strip()) > 0:
-            extracted_text.append(para.text)
+        extracted_text.append(para.text)
     return extracted_text
 
 def normalize_bullets(extract_text):

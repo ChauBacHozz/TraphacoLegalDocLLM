@@ -33,11 +33,18 @@ if st.button("Upload to database"):
         doc_file = docx.Document(upload_file)
         # Extract text from doc
         extracted_text = extract_text(doc_file)
-
+        # Remove special text from extracted_text
+        if "\xa0" in extracted_text:
+            extracted_text.remove("\xa0")
+        # Extract document heading
         doc_number = doc_file.tables[0].rows[1].cells[0].text
         heading = ": ".join(extracted_text[:2])
         heading = heading + " | " + doc_number
-        print("Heading:", heading)
+        if "nghị định" in heading.lower() or "thông tư" in heading.lower():
+            print("Type 1")
+        else:
+            print(heading)
+
         # Merge bullet from extracted text
         full_text = normalize_bullets(extracted_text)
         # Convert text list to tree base to manage content 
