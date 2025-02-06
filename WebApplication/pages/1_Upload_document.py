@@ -11,16 +11,20 @@ from icecream import ic
 from collections import OrderedDict
 
 
-EMBEDDING_MODEL_NAME = "dangvantuan/vietnamese-document-embedding"
+# EMBEDDING_MODEL_NAME = "dangvantuan/vietnamese-document-embedding"
 st.set_page_config(page_title="Upload document", page_icon="📈")
 
-@st.cache_resource
-def get_embedding_model(embedding_model_name):
-    return SentenceTransformer(embedding_model_name, trust_remote_code=True)
+# @st.cache_resource
+# def get_embedding_model(embedding_model_name):
+#     return SentenceTransformer(embedding_model_name, trust_remote_code=True)
 
-with st.spinner("Loading Language Embedding model"):
-    embedding_model = get_embedding_model(embedding_model_name=EMBEDDING_MODEL_NAME)
-
+# with st.spinner("Loading Language Embedding model"):
+#     embedding_model = get_embedding_model(embedding_model_name=EMBEDDING_MODEL_NAME)
+if "embedding_model" in st.session_state:
+    embedding_model = st.session_state.embedding_model
+else:
+    st.write("No data found in session state.")
+    
 st.markdown("# Upload document")
 st.sidebar.header("Upload your document")
 st.write(

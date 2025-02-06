@@ -1,9 +1,29 @@
 import streamlit as st
+from sentence_transformers import SentenceTransformer
+from backend.RAGQwenModel import RAGQwen
 
 st.set_page_config(
     page_title = "Home",
     page_icon = "🏠"
 )
+
+EMBEDDING_MODEL_NAME = "dangvantuan/vietnamese-document-embedding"
+
+@st.cache_resource
+def get_embedding_model(embedding_model_name):
+    return SentenceTransformer(embedding_model_name, trust_remote_code=True)
+
+@st.cache_resource
+def get_model(_embedding_model):
+    return RAGQwen(embedding_model = _embedding_model)
+
+if "embedding_model" not in st.session_state:
+    with st.spinner("Loading Embedding model"):
+        st.session_state.embedding_model = get_embedding_model     (embedding_model_name=EMBEDDING_MODEL_NAME)
+
+if "rag_model" not in st.session_state:
+    with st.spinner("Loading RAG model"):
+        st.session_state.rag_model = get_model(st.session_state.embedding_model)
 
 st.write("Welcome to web app")
 

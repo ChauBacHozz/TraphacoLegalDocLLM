@@ -14,14 +14,18 @@ import pickle
 
 class RAGQwen():
     def __init__(self, vector_db_path = "vectorstores/db_faiss", 
-                 embedding_model_file = 'dangvantuan/vietnamese-document-embedding',
+                 embedding_model = None,
                  model_file = "AITeamVN/Vi-Qwen2-7B-RAG",
                  ):
         
         self.vector_db_path = vector_db_path
         self.model_file = model_file
         # Initialize the embedding model
-        self.embedding_model = SentenceTransformer(embedding_model_file, trust_remote_code=True)
+        if embedding_model == None:
+            self.embedding_model = SentenceTransformer('dangvantuan/vietnamese-document-embedding', trust_remote_code=True)
+        else:
+            print("Founded existing embedding model")
+            self.embedding_model = embedding_model
         self.index, self.loaded_data = self.load_faiss_and_data("db/faiss_index.bin", "db/data.pkl")
         self.texts = [data for data in self.loaded_data]
         self.tokenized_docs = [doc.split() for doc in self.texts]

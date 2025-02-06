@@ -3,13 +3,17 @@ import time
 from backend.RAGQwenModel import RAGQwen
 
 st.title("Legal chatbot LLM")
-@st.cache_resource
-def get_model():
-    # Create a model of the specified type
-    return RAGQwen()
+# @st.cache_resource
+# def get_model():
+#     # Create a model of the specified type
+#     return RAGQwen()
 
-with st.spinner("Loading RAG model"):
-    rag_model = get_model()
+# with st.spinner("Loading RAG model"):
+#     rag_model = get_model()
+if "rag_model" in st.session_state:
+    rag_model = st.session_state.rag_model
+else:
+    st.write("No data found in session state.")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
