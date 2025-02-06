@@ -25,11 +25,6 @@ def extract_text(doc):
     return extracted_text, appendix_index
 
 def normalize_bullets(extract_text):
-    alphabet_lst = [i for i in ascii]
-    digit_lst = [str(i) for i in range(99)]
-    bullet_levels1 = [["chương"], ["mục"], ["điều"], digit_lst, alphabet_lst]
-    bullet_levels2 = [["chương"], ["phụ lục"], digit_lst, alphabet_lst]
-
     def check_in_first3(bullet, end_bullet_idx = 3):
         for i in range(end_bullet_idx):
             if  bullet in bullet_levels1[i]:
@@ -64,6 +59,33 @@ def normalize_bullets(extract_text):
             continue
         full_text.append(para)
     return full_text
+def normalize_appendix_text_bullets(extract_text, appendix_heading_ids):
+    def detect_TOC(texts):
+        toc = []
+        toc_idx = None
+        # Loop through texts until duplicate
+        for text in texts:
+            if text.lower().strip() not in toc:
+                toc.append(text.lower().strip())
+            else:
+                toc_idx = toc.index(text.lower().strip())
+                break 
+        print("------", toc[toc_idx:])
+
+    chunks = []
+    apd_size = len(appendix_heading_ids)
+    for i in range(apd_size):
+        if i < apd_size - 1:
+            chunks.append(extract_text[appendix_heading_ids[i]:appendix_heading_ids[i+1]])
+
+        else:
+            chunks.append(extract_text[appendix_heading_ids[i]:])
+    detect_TOC(chunks[0])
+
+
+
+
+    
 def check_branch_level(tree):
     level = 0
     next_tree = tree

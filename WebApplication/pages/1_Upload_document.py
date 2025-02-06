@@ -6,7 +6,7 @@ from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from sentence_transformers import SentenceTransformer
 from backend.preprocess_docx import (extract_text, normalize_bullets, 
                                      convert_text_list_to_tree, flatten_tree,
-                                     preprocess_chunks)
+                                     preprocess_chunks, normalize_appendix_text_bullets)
 from backend.save_doc_to_db import save_to_db
 from icecream import ic
 from collections import OrderedDict
@@ -72,40 +72,41 @@ def save_pre_appendix_text_type1_to_db(extracted_text, heading, embedding_model)
     
     st.toast(f"Saved {upload_file.name} database✅")
 
-def save_appendix_text_type1_to_db(extracted_text, heading, embedding_model):
-    heading_idx = None
-    for i, text in enumerate(extracted_text[:100]):
-        if "chương" in text.lower():
-            heading_idx = i
-            break
+def save_appendix_text_type1_to_db(document, heading):
+    extracted_text = []
+    appendix_ids = []
+    temp_idx = 0
+    for para in document.paragraphs:
+        if para.text != "\xa0":
+            extracted_text.append(para.text)
+            temp_idx += 1
+        if para.alignment == WD_PARAGRAPH_ALIGNMENT.CENTER and "phụ lục" in para.text.lower():
+            appendix_ids.append(temp_idx)
 
-    if heading_idx:
-        extracted_text = extracted_text[heading_idx:]
-    else:
-        print("ERROR")
-        return
-
-    full_text = normalize_bullets(extracted_text)
-    # Convert text list to tree base to manage content 
-    tree = convert_text_list_to_tree(full_text)
+    full_text = extracted_text[appendix_ids[0] - 1:]
+    print(appendix_ids)
+    normalized_appendix_ids = [ids - appendix_ids[0] for ids in appendix_ids]
+    full_text = normalize_appendix_text_bullets(full_text, normalized_appendix_ids)
+    # # Convert text list to tree base to manage content 
+    # tree = convert_text_list_to_tree(full_text)
     
-    # Flatten tree into list of strings
-    flattened_tree = flatten_tree(tree)
-    # Split data into chunks
-    chunks = [text[0] for text in flattened_tree]
-    # chunks = [f"{path}: {text}" for path, text in flattened_tree]
-    # Preprocess chunks
-    preprocessed_chunks = preprocess_chunks(chunks, heading)
-    # Extract 'text' atribute from preprocessed_chunks
-    texts = [chunk['text'] for chunk in preprocessed_chunks]
-    metadata_lst = []
-    for chunk in preprocessed_chunks:
-        chunk.pop("text")
-        metadata_lst.append(chunk)
-    save_to_db(texts, metadata_lst, embedding_model)
+    # # Flatten tree into list of strings
+    # flattened_tree = flatten_tree(tree)
+    # # Split data into chunks
+    # chunks = [text[0] for text in flattened_tree]
+    # # chunks = [f"{path}: {text}" for path, text in flattened_tree]
+    # # Preprocess chunks
+    # preprocessed_chunks = preprocess_chunks(chunks, heading)
+    # # Extract 'text' atribute from preprocessed_chunks
+    # texts = [chunk['text'] for chunk in preprocessed_chunks]
+    # metadata_lst = []
+    # for chunk in preprocessed_chunks:
+    #     chunk.pop("text")
+    #     metadata_lst.append(chunk)
+    # save_to_db(texts, metadata_lst, embedding_model)
 
     
-    st.toast(f"Saved {upload_file.name} database✅")
+    # st.toast(f"Saved {upload_file.name} database✅")
 if st.button("Upload to database"):
     for upload_file in upload_files:
         doc_file = docx.Document(upload_file)
@@ -114,7 +115,7 @@ if st.button("Upload to database"):
         # Remove special text from extracted_text
         # if "\xa0" in extracted_text:
         #     extracted_text.remove("\xa0")
-        if appendix_text != None:
+        if appendix_index != None:
             pre_appendix_text = extracted_text[:appendix_index - 1]
             appendix_text = extracted_text[appendix_index - 1:]
         else:
@@ -126,9 +127,10 @@ if st.button("Upload to database"):
         # Type 1
         if "nghị định" in heading.lower() or "thông tư" in heading.lower():
             print("Nghị định hoặc thông tư")
-            save_pre_appendix_text_type1_to_db(pre_appendix_text, heading, embedding_model)
-            if appendix_text != None:
-                save_appendix_text_type1_to_db(appendix_text, heading, embedding_model)
+            if appendix_index != None:
+                save_appendix_text_type1_to_db(doc_file, heading)
+            # save_pre_appendix_text_type1_to_db(pre_appendix_text, heading, embedding_model)
+
         elif "luật" in heading.lower():
             if "sửa đổi" in heading.lower():
                 print("Luật sử đổi bổ sung")
