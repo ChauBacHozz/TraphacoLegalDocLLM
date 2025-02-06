@@ -50,5 +50,7 @@ if st.button("Upload to database"):
         for chunk in preprocessed_chunks:
             chunk.pop("text")
             metadata_lst.append(chunk)
-        save_to_db(texts, metadata_lst, embedding_model)
+        # save_to_db(texts, metadata_lst, embedding_model)
+
+        
         st.toast(f"Saved {upload_file.name} database✅")
