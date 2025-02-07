@@ -15,7 +15,7 @@ import pickle
 class RAGQwen():
     def __init__(self, vector_db_path = "vectorstores/db_faiss", 
                  embedding_model = None,
-                 model_file = "AITeamVN/Vi-Qwen2-7B-RAG",
+                 model_file = "AITeamVN/Vi-Qwen2-3B-RAG",
                  ):
         
         self.vector_db_path = vector_db_path
@@ -112,7 +112,7 @@ class RAGQwen():
             bnb_4bit_use_double_quant=True,  # Sử dụng độ chính xác kép để lượng hóa kích hoạt
         )
         # quantization_config = BitsAndBytesConfig(load_in_8bit=True, llm_int8_threshold = 6.0)
-        model = AutoModelForCausalLM.from_pretrained(model_file, device_map="auto", quantization_config=quantization_config,)
+        model = AutoModelForCausalLM.from_pretrained(model_file, device_map="auto", quantization_config=quantization_config)
         tokenizer = AutoTokenizer.from_pretrained(model_file)
         return model, tokenizer
 
