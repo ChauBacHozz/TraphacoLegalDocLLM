@@ -72,7 +72,22 @@ def normalize_appendix_text_bullets(extract_text, appendix_heading_ids):
                 toc_idx = toc.index(text.lower().strip())
                 break 
         return toc[toc_idx:]
-
+    
+    def is_heading(text):
+        """ Heuristic function to check if a line is a heading """
+        if len(text) < 100:  # Headings are usually shorter
+            if re.match(r'^[A-Za-z]\)\s+', text):  # Exclude lines starting with 'A)', 'b)', etc.
+                return False
+            if text.isupper():  # All Caps
+                return True
+            if text.istitle():  # Title Case
+                return True
+            if re.match(r'^\d+(\.\d+)*\s+', text):  # Numbered headings (1., 1.1, 2.1.1)
+                return True
+            if not text.endswith((('.', ':', ',', ';'))):  # No period at the end
+                return True
+        return False
+    
     chunks = []
     apd_size = len(appendix_heading_ids)
     for i in range(apd_size):
@@ -85,6 +100,10 @@ def normalize_appendix_text_bullets(extract_text, appendix_heading_ids):
     for chunk in chunks:
         heading = chunk[:2]
         toc = detect_TOC(chunk)
+        for i in chunk[2 + len(toc):]:
+            if is_heading(i):
+                print(i)
+        break
 
 
 
