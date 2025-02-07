@@ -1,8 +1,0 @@
-[I. Phân loại mức độ tồn tại:1. Tồn tại nghiêm trọng: là những sai lệch so với tiêu chuẩn GDP dẫn đến thuốc, nguyên liệu làm thuốc không đảm bảo chất lượng, an toàn, hiệu quả và gây nguy cơ ảnh hưởng nghiêm trọng đến sức khỏe, tính mạng của người sử dụng hoặc của cộng đồng; hoặc là sự kết hợp của một số tồn tại nặng cho thấy một thiếu sót nghiêm trọng của hệ thống. Tồn tại này bao gồm cả những hoạt động làm tăng nguy cơ đưa thuốc giả đến người sử dụng.
-2. Tồn tại nặng: là tồn tại không nghiêm trọng nhưng có thể dẫn đến việc bảo quản sản phẩm, nguyên liệu không tuân thủ theo hướng dẫn bảo quản của nhà sản xuất, hoặc liên quan tới một sai lệch lớn so với các quy định của GDP hoặc điều kiện bảo quản; hoặc liên quan tới việc không tuân thủ các quy trình bảo quản hoặc việc người có thẩm quyền không đáp ứng đủ yêu cầu về trách nhiệm trong công việc; hoặc tổ hợp của các tồn tại khác, không tồn tại nào trong tổ hợp đó được xem là tồn tại nặng, nhưng khi xuất hiện cùng nhau các tồn tại này sẽ tạo thành một tồn tại nặng và cần được phân tích và báo cáo như một tồn tại nặng.
-3. Tồn tại nhẹ: Là những tồn tại mà không xếp loại thành tồn tại nghiêm trọng hoặc tồn tại nặng, nhưng là một sai lệch so với các tiêu chuẩn GDP.]
---------------------------
-[II. Đánh giá mức độ đáp ứng GDP:1) Mức độ 1: Cơ sở không có tồn tại nghiêm trọng và tồn tại nặng.
-2) Mức độ 2: Cơ sở không có tồn tại nghiêm trọng và có tồn tại nặng.
-3) Mức độ 3: Cơ sở có tồn tại nghiêm trọng.]
---------------------------

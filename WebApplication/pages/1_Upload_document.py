@@ -12,7 +12,7 @@ from icecream import ic
 from collections import OrderedDict
 
 
-# EMBEDDING_MODEL_NAME = "dangvantuan/vietnamese-document-embedding"
+EMBEDDING_MODEL_NAME = "dangvantuan/vietnamese-document-embedding"
 st.set_page_config(page_title="Upload document", page_icon="📈")
 
 # @st.cache_resource
@@ -70,7 +70,6 @@ def save_pre_appendix_text_type1_to_db(extracted_text, heading, embedding_model)
     save_to_db(texts, metadata_lst, embedding_model)
 
     
-    st.toast(f"Saved {upload_file.name} database✅")
 
 def save_appendix_text_type1_to_db(document, heading):
     extracted_text = []
@@ -90,7 +89,7 @@ def save_appendix_text_type1_to_db(document, heading):
     else:
         full_text = extracted_text[appendix_ids[0] - 1:]
     normalized_appendix_ids = [ids - appendix_ids[0] for ids in appendix_ids]
-    full_text = normalize_appendix_text_bullets(full_text, normalized_appendix_ids)
+    chunks = normalize_appendix_text_bullets(full_text, normalized_appendix_ids)
     # # Convert text list to tree base to manage content 
     # tree = convert_text_list_to_tree(full_text)
     
@@ -100,17 +99,16 @@ def save_appendix_text_type1_to_db(document, heading):
     # chunks = [text[0] for text in flattened_tree]
     # # chunks = [f"{path}: {text}" for path, text in flattened_tree]
     # # Preprocess chunks
-    # preprocessed_chunks = preprocess_chunks(chunks, heading)
+    preprocessed_chunks = preprocess_chunks(chunks, heading)
     # # Extract 'text' atribute from preprocessed_chunks
-    # texts = [chunk['text'] for chunk in preprocessed_chunks]
-    # metadata_lst = []
-    # for chunk in preprocessed_chunks:
-    #     chunk.pop("text")
-    #     metadata_lst.append(chunk)
-    # save_to_db(texts, metadata_lst, embedding_model)
+    texts = [chunk['text'] for chunk in preprocessed_chunks]
+    metadata_lst = []
+    for chunk in preprocessed_chunks:
+        chunk.pop("text")
+        metadata_lst.append(chunk)
+    save_to_db(texts, metadata_lst, embedding_model)
 
     
-    # st.toast(f"Saved {upload_file.name} database✅")
 if st.button("Upload to database"):
     for upload_file in upload_files:
         doc_file = docx.Document(upload_file)
@@ -132,8 +130,10 @@ if st.button("Upload to database"):
         if "nghị định" in heading.lower() or "thông tư" in heading.lower():
             print("Nghị định hoặc thông tư")
             if appendix_index != None:
+                print("Có phụ lục")
                 save_appendix_text_type1_to_db(doc_file, heading)
-            # save_pre_appendix_text_type1_to_db(pre_appendix_text, heading, embedding_model)
+            save_pre_appendix_text_type1_to_db(pre_appendix_text, heading, embedding_model)
+            st.toast(f"Saved {upload_file.name} database✅")
 
         elif "luật" in heading.lower():
             if "sửa đổi" in heading.lower():

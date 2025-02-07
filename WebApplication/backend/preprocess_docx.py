@@ -148,24 +148,16 @@ def normalize_appendix_text_bullets(extract_text, appendix_heading_ids):
                 bullets[-1] = bullets[-1] + "\n" + text
                 continue
         for bullet in bullets:
-            splitter_numbers = bullet.count(">")
-            residual = 4 - splitter_numbers
-            temp = ""
-            for i in range(residual):
-                temp = "> " + temp
-            bullet = heading + " " + temp + bullet 
-        res.append((heading, bullets))
-    for heading, data in res:
-        name = heading.split(":")[0]
-        text_file = open(f"{name}.txt", "w")
-        for bullet in data:
-            text_file.write("[")
-            text_file.write(bullet)
-            text_file.write("]")
-            text_file.write("\n--------------------------\n")
-        text_file.close()
+            if len(bullet.strip()) > 0:
+                splitter_numbers = bullet.count(">")
+                residual = 3 - splitter_numbers
+                temp = ""
+                for i in range(residual):
+                    temp = "> " + temp
+                bullet = heading + " " + temp + bullet 
+                res.append(bullet)
             # break
-
+    return res
 
 
 
@@ -234,26 +226,26 @@ def preprocess_chunks(chunks, heading):
         chunk = chunk.strip()
         # ic(chunk)
         # Match hierarchical parts using regex
-        match = re.match(r"(Chương [^\>]+) > (Mục [^\>]+)? > (Điều [^\.\>]+)\. (.+)", chunk)
+        match = chunk.split(">")
         # ic(match)
         if match:
-            chapter = match.group(1).strip()
-            section = match.group(2).strip() if match.group(2) else None
-            article = match.group(3).strip()
-            content = match.group(4).strip()
+            chapter = match[0].strip()
+            section = match[1].strip() if match[0] else None
+            article = match[2].strip()
+            content = match[3].strip()
             # ic(match.group(4).strip())
         # break
 
             # Combine hierarchical info with content for embedding
-            combined_text = f"{heading} > {chapter} > {section if section else ''} > {article}. {content}".strip()
+            combined_text = heading + " > " + chunk
 
             # Append structured data
             processed_chunks.append({
                 "id": idx + 1,          # Unique ID for each chunk
                 "heading": heading,     # Document heading
-                "chapter": chapter,     # Chapter name
-                "section": section,     # Section name (if any)
-                "article": article,     # Article name
+                "heading1": chapter,     # Chapter name
+                "heading2": section,     # Section name (if any)
+                "heading3": article,     # Article name
                 "content": content,     # Content text
                 "text": combined_text   # Full text for embedding
             })
