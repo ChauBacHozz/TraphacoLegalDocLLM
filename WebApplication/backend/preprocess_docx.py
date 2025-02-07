@@ -59,6 +59,7 @@ def normalize_bullets(extract_text):
             continue
         full_text.append(para)
     return full_text
+
 def normalize_appendix_text_bullets(extract_text, appendix_heading_ids):
     def detect_TOC(texts):
         toc = []
@@ -70,7 +71,7 @@ def normalize_appendix_text_bullets(extract_text, appendix_heading_ids):
             else:
                 toc_idx = toc.index(text.lower().strip())
                 break 
-        print("------", toc[toc_idx:])
+        return toc[toc_idx:]
 
     chunks = []
     apd_size = len(appendix_heading_ids)
@@ -80,7 +81,11 @@ def normalize_appendix_text_bullets(extract_text, appendix_heading_ids):
 
         else:
             chunks.append(extract_text[appendix_heading_ids[i]:])
-    detect_TOC(chunks[0])
+    
+    for chunk in chunks:
+        heading = chunk[:2]
+        toc = detect_TOC(chunk)
+
 
 
 

@@ -14,14 +14,14 @@ def get_model():
     return RAGQwen()
 
         
-if "rag_model" not in st.session_state:
-    with st.spinner("Loading RAG model"):
-        st.session_state.rag_model = get_model()
+# if "rag_model" not in st.session_state:
+#     with st.spinner("Loading RAG model"):
+#         st.session_state.rag_model = get_model()
         
-if "embedding_model" not in st.session_state:
-    with st.spinner("Loading Embedding model"):
-        st.session_state.embedding_model = st.session_state.rag_model.embedding_model
-        print(st.session_state.embedding_model)
+# if "embedding_model" not in st.session_state:
+#     with st.spinner("Loading Embedding model"):
+#         st.session_state.embedding_model = st.session_state.rag_model.embedding_model
+#         print(st.session_state.embedding_model)
 
 st.write("Welcome to web app")
 
