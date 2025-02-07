@@ -229,10 +229,18 @@ def preprocess_chunks(chunks, heading):
         match = chunk.split(">")
         # ic(match)
         if match:
-            chapter = match[0].strip()
-            section = match[1].strip() if match[0] else None
-            article = match[2].strip()
-            content = match[3].strip()
+            if len(match) >= 4:
+
+                chapter = match[0].strip()
+                section = match[1].strip() if match[0] else None
+                article = match[2].strip()
+                content = match[3].strip()
+            else:
+                chapter = match[0].strip()
+                section = None
+                article = None
+                content = match[-1].strip()
+
             # ic(match.group(4).strip())
         # break
 

@@ -61,6 +61,7 @@ def save_pre_appendix_text_type1_to_db(extracted_text, heading, embedding_model)
     # chunks = [f"{path}: {text}" for path, text in flattened_tree]
     # Preprocess chunks
     preprocessed_chunks = preprocess_chunks(chunks, heading)
+    ic(preprocessed_chunks)
     # Extract 'text' atribute from preprocessed_chunks
     texts = [chunk['text'] for chunk in preprocessed_chunks]
     metadata_lst = []
