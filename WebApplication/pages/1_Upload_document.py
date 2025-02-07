@@ -76,15 +76,19 @@ def save_appendix_text_type1_to_db(document, heading):
     extracted_text = []
     appendix_ids = []
     temp_idx = 0
+    remove_idx = None
     for para in document.paragraphs:
         if para.text != "\xa0":
             extracted_text.append(para.text)
             temp_idx += 1
         if para.alignment == WD_PARAGRAPH_ALIGNMENT.CENTER and "phụ lục" in para.text.lower():
             appendix_ids.append(temp_idx)
-
-    full_text = extracted_text[appendix_ids[0] - 1:]
-    print(appendix_ids)
+        if para.alignment == WD_PARAGRAPH_ALIGNMENT.CENTER and "biểu mẫu" in para.text.lower():
+            remove_idx = temp_idx - 1
+    if remove_idx:
+        full_text = extracted_text[appendix_ids[0] - 1:remove_idx]
+    else:
+        full_text = extracted_text[appendix_ids[0] - 1:]
     normalized_appendix_ids = [ids - appendix_ids[0] for ids in appendix_ids]
     full_text = normalize_appendix_text_bullets(full_text, normalized_appendix_ids)
     # # Convert text list to tree base to manage content 

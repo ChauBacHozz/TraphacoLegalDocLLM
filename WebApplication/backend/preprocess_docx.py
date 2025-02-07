@@ -100,8 +100,10 @@ def normalize_appendix_text_bullets(extract_text, appendix_heading_ids):
         else:
             chunks.append(extract_text[appendix_heading_ids[i]:])
     
+    res = []
     for chunk in chunks:
-        heading = chunk[:2]
+        heading = ": ".join(chunk[:2])
+        heading = heading.replace("\n", " ")
         # toc = detect_TOC(chunk)
         bullets = []
         toc = []
@@ -113,8 +115,11 @@ def normalize_appendix_text_bullets(extract_text, appendix_heading_ids):
                 bullets.append(temp + " > " + text)
                 continue
             if is_heading(text) and text not in toc and len(bullets) > 0 and post_heading and last_heading == False:
-                bullets.append(str(bullets[-1].split(" > ")[:-1]) + " > " + text)
+                bullets.append(bullets[-1].split(" > ")[0] + " > " + text)
                 continue
+            # if is_heading(text) and text not in toc and len(bullets) > 0 and last_heading == False:
+            #     bullets.append(text)
+            #     continue
             if len(bullets) > 0:
                 if text.lower() == bullets[0].split(" > ")[0].lower():
                     toc = bullets[0].split(" > ")
@@ -142,14 +147,24 @@ def normalize_appendix_text_bullets(extract_text, appendix_heading_ids):
                 last_heading = False
                 bullets[-1] = bullets[-1] + "\n" + text
                 continue
-        text_file = open("Output.txt", "w")
         for bullet in bullets:
+            splitter_numbers = bullet.count(">")
+            residual = 4 - splitter_numbers
+            temp = ""
+            for i in range(residual):
+                temp = "> " + temp
+            bullet = heading + " " + temp + bullet 
+        res.append((heading, bullets))
+    for heading, data in res:
+        name = heading.split(":")[0]
+        text_file = open(f"{name}.txt", "w")
+        for bullet in data:
             text_file.write("[")
             text_file.write(bullet)
             text_file.write("]")
             text_file.write("\n--------------------------\n")
         text_file.close()
-        break
+            # break
 
 
 
