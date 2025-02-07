@@ -1,6 +1,7 @@
 import string
 import re
 from collections import OrderedDict
+from icecream import ic
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 
 seps = '[.,;-+]'
@@ -78,6 +79,8 @@ def normalize_appendix_text_bullets(extract_text, appendix_heading_ids):
         if len(text) < 100:  # Headings are usually shorter
             if re.match(r'^[A-Za-z]\)\s+', text):  # Exclude lines starting with 'A)', 'b)', etc.
                 return False
+            if text[0] == "(":  # Exclude "(a)", "(b)", "(c)"
+                return False
             if text.isupper():  # All Caps
                 return True
             if text.istitle():  # Title Case
@@ -99,10 +102,53 @@ def normalize_appendix_text_bullets(extract_text, appendix_heading_ids):
     
     for chunk in chunks:
         heading = chunk[:2]
-        toc = detect_TOC(chunk)
-        for i in chunk[2 + len(toc):]:
-            if is_heading(i):
-                print(i)
+        # toc = detect_TOC(chunk)
+        bullets = []
+        toc = []
+        last_heading = False
+        post_heading = False
+        for text in chunk[2:]:
+            if text in toc and post_heading:
+                temp = str(bullets[-1].split(" > ")[:-1])
+                bullets.append(temp + " > " + text)
+                continue
+            if is_heading(text) and text not in toc and len(bullets) > 0 and post_heading and last_heading == False:
+                bullets.append(str(bullets[-1].split(" > ")[:-1]) + " > " + text)
+                continue
+            if len(bullets) > 0:
+                if text.lower() == bullets[0].split(" > ")[0].lower():
+                    toc = bullets[0].split(" > ")
+                    last_heading = True
+                    post_heading = False 
+                    bullets.append(text)
+                    continue
+            if is_heading(text) and last_heading == False:
+                last_heading = True
+                post_heading = False 
+                bullets.append(text)
+                continue
+            if is_heading(text) and last_heading:
+                last_heading = True
+                post_heading = True
+                bullets[-1] = bullets[-1] + " > " + text
+                continue
+
+            if is_heading(text) == False and last_heading:
+                last_heading = False
+                bullets[-1] = bullets[-1] + ":" + text
+                continue
+
+            if is_heading(text) == False and last_heading == False:
+                last_heading = False
+                bullets[-1] = bullets[-1] + "\n" + text
+                continue
+        text_file = open("Output.txt", "w")
+        for bullet in bullets:
+            text_file.write("[")
+            text_file.write(bullet)
+            text_file.write("]")
+            text_file.write("\n--------------------------\n")
+        text_file.close()
         break
 
 
