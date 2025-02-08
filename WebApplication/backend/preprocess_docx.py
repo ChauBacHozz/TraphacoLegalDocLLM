@@ -26,7 +26,7 @@ def extract_text(doc):
     return extracted_text, appendix_index
 
 def normalize_bullets(extract_text):
-    def check_in_first3(bullet, end_bullet_idx = 3):
+    def check_in_first3(bullet, end_bullet_idx = 4):
         for i in range(end_bullet_idx):
             if  bullet in bullet_levels1[i]:
                 return True
@@ -135,7 +135,10 @@ def normalize_appendix_text_bullets(extract_text, appendix_heading_ids):
             if is_heading(text) and last_heading:
                 last_heading = True
                 post_heading = True
-                bullets[-1] = bullets[-1] + " > " + text
+                if bullets[-1].count(">") > 0:
+                    bullets.append(str(bullets[-1].split(" > ")[:-1]) + text)
+                else:
+                    bullets[-1] = bullets[-1] + " > " + text
                 continue
 
             if is_heading(text) == False and last_heading:
