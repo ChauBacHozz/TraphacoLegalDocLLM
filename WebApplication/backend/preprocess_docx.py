@@ -227,7 +227,7 @@ def flatten_tree(tree, parent_path="", separator=" > "):
             flat_list.append((current_path, ""))
     return flat_list
 
-def preprocess_chunks(chunks, heading):
+def preprocess_chunks(chunks, heading, doc_number):
     """
     Process raw chunks into a structured format with chapter, section, article, and content.
     """
@@ -256,17 +256,27 @@ def preprocess_chunks(chunks, heading):
         # break
 
             # Combine hierarchical info with content for embedding
-            combined_text = heading + " > " + chunk
-
+            doc_idx = re.search(f"\d", doc_number)
+            if doc_idx:
+                doc_id = doc_number[doc_idx.start():]
+                
+                if "/" in doc_id:
+                    doc_id = doc_id.replace("/", "")
+                if "-" in doc_id:
+                    doc_id = doc_id.replace("-", "")
+            else:
+                doc_id = idx + 1
+            combined_text = doc_id + " > " + chunk
+            path = ">".join(match[:-1])
             # Append structured data
             processed_chunks.append({
-                "id": idx + 1,          # Unique ID for each chunk
-                "heading": heading,     # Document heading
-                "heading1": chapter,     # Chapter name
-                "heading2": section,     # Section name (if any)
-                "heading3": article,     # Article name
+                "id": doc_id,          # Unique ID for each chunk
+                # "heading": heading,     # Document heading
+                # "heading1": chapter,     # Chapter name
+                # "heading2": section,     # Section name (if any)
+                # "heading3": article,     # Article name
+                "path": path,
                 "content": content,     # Content text
-                "text": combined_text   # Full text for embedding
             })
         else:
             # Handle unmatched chunks (log for review)

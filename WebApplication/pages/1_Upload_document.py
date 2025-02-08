@@ -13,7 +13,7 @@ from collections import OrderedDict
 import os
 from tqdm import tqdm
 from stqdm import stqdm
-
+import re
 
 PATH = 'D:/VS_Workspace/LLM/.cache'
 os.environ['TRANSFORMERS_CACHE'] = PATH
@@ -46,7 +46,7 @@ upload_files = st.file_uploader(
 )
 
 
-def save_pre_appendix_text_type1_to_db(extracted_text, heading, embedding_model):
+def save_pre_appendix_text_type1_to_db(extracted_text, heading, doc_number, embedding_model):
     heading_idx = None
     for i, text in enumerate(extracted_text[:100]):
         if "chương" in text.lower():
@@ -69,12 +69,12 @@ def save_pre_appendix_text_type1_to_db(extracted_text, heading, embedding_model)
     chunks = [text[0] for text in flattened_tree]
     # chunks = [f"{path}: {text}" for path, text in flattened_tree]
     # Preprocess chunks
-    preprocessed_chunks = preprocess_chunks(chunks, heading)
+    preprocessed_chunks = preprocess_chunks(chunks, heading, doc_number)
     # Extract 'text' atribute from preprocessed_chunks
-    texts = [chunk['text'] for chunk in preprocessed_chunks]
+    texts = [chunk['content'] for chunk in preprocessed_chunks]
     metadata_lst = []
     for chunk in preprocessed_chunks:
-        chunk.pop("text")
+        chunk.pop("content")
         metadata_lst.append(chunk)
 
     batch_size = 3    
@@ -84,7 +84,7 @@ def save_pre_appendix_text_type1_to_db(extracted_text, heading, embedding_model)
         save_to_db(texts[i:i+batch_size],metadata_lst[i:i+batch_size], embedding_model)
 
 
-def save_appendix_text_type1_to_db(document, heading):
+def save_appendix_text_type1_to_db(document, heading, doc_number, embedding_model):
     extracted_text = []
     appendix_ids = []
     temp_idx = 0
@@ -112,14 +112,14 @@ def save_appendix_text_type1_to_db(document, heading):
     # chunks = [text[0] for text in flattened_tree]
     # # chunks = [f"{path}: {text}" for path, text in flattened_tree]
     # # Preprocess chunks
-    preprocessed_chunks = preprocess_chunks(chunks, heading)
+    preprocessed_chunks = preprocess_chunks(chunks, heading, doc_number)
     ic(preprocessed_chunks)
 
     # # Extract 'text' atribute from preprocessed_chunks
-    texts = [chunk['text'] for chunk in preprocessed_chunks]
+    texts = [chunk['content'] for chunk in preprocessed_chunks]
     metadata_lst = []
     for chunk in preprocessed_chunks:
-        chunk.pop("text")
+        chunk.pop("content")
         metadata_lst.append(chunk)
 
     batch_size = 3    
@@ -144,14 +144,13 @@ if st.button("Upload to database"):
         # Extract document heading
         doc_number = doc_file.tables[0].rows[1].cells[0].text
         heading = ": ".join(extracted_text[:2])
-        heading = heading + " | " + doc_number
         # Type 1
         if "nghị định" in heading.lower() or "thông tư" in heading.lower():
             print("Nghị định hoặc thông tư")
             if appendix_index != None:
                 print("Có phụ lục")
-                save_appendix_text_type1_to_db(doc_file, heading)
-            save_pre_appendix_text_type1_to_db(pre_appendix_text, heading, embedding_model)
+                save_appendix_text_type1_to_db(doc_file, heading, doc_number, embedding_model)
+            save_pre_appendix_text_type1_to_db(pre_appendix_text, heading, doc_number, embedding_model)
             st.toast(f"Saved {upload_file.name} database✅")
 
         elif "luật" in heading.lower():

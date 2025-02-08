@@ -12,6 +12,8 @@ import faiss
 import numpy as np
 import pickle
 import os
+from underthesea import word_tokenize
+
 PATH = 'D:/VS_Workspace/LLM/.cache'
 os.environ['TRANSFORMERS_CACHE'] = PATH
 os.environ['HF_HOME'] = PATH
@@ -64,6 +66,9 @@ class RAGQwen():
         self.index, self.loaded_data = self.load_faiss_and_data("db/faiss_index.bin", "db/data.pkl")
         self.texts = [data for data in self.loaded_data]
         self.tokenized_docs = [doc.split() for doc in self.texts]
+    def count_tokens_underthesea(self, text):
+        tokens = word_tokenize(text, format="text").split()
+        return len(tokens)
     def search_query(self, query: str):
         """
         Perform a similarity search on the vector database.
@@ -75,15 +80,16 @@ class RAGQwen():
         query_embedding = self.embedding_model.encode([query], convert_to_numpy=True)
         bm25 = BM25Okapi(self.tokenized_docs)
         
+        n_contexts = 6
         # Dense Retrieval (FAISS)
-        D, I = self.index.search(query_embedding, k=3)  # Retrieve top-3 similar docs
+        D, I = self.index.search(query_embedding, k=n_contexts)  # Retrieve top-3 similar docs
         dense_results = [self.texts[i] for i in I[0]]
         dense_scores = D[0]
 
         # Sparse Retrieval (BM25)
         query_tokens = query.split()
         bm25_scores = bm25.get_scores(query_tokens)
-        top_k_bm25 = sorted(range(len(bm25_scores)), key=lambda i: bm25_scores[i], reverse=True)[:3]
+        top_k_bm25 = sorted(range(len(bm25_scores)), key=lambda i: bm25_scores[i], reverse=True)[:n_contexts]
         sparse_results = [self.texts[i] for i in top_k_bm25]
         sparse_scores = [bm25_scores[i] for i in top_k_bm25]
 
@@ -136,6 +142,10 @@ class RAGQwen():
     
     def rag_answer(self, prompt):
         context_list = self.search_query(prompt)
+        n_tokens = 0
+        for context in context_list:
+            n_tokens += self.count_tokens_underthesea(context)
+        print(f"😄 there are {n_tokens} tokens in context")
         context = "\n".join(context_list)
         # print("\n\n\nCONTEXT:", context)
         # print("\n\n")
