@@ -10,7 +10,16 @@ from backend.preprocess_docx import (extract_text, normalize_bullets,
 from backend.save_doc_to_db import save_to_db
 from icecream import ic
 from collections import OrderedDict
+import os
+from tqdm import tqdm
+from stqdm import stqdm
 
+
+PATH = 'D:/VS_Workspace/LLM/.cache'
+os.environ['TRANSFORMERS_CACHE'] = PATH
+os.environ['HF_HOME'] = PATH
+os.environ['HF_DATASETS_CACHE'] = PATH
+os.environ['TORCH_HOME'] = PATH
 
 EMBEDDING_MODEL_NAME = "dangvantuan/vietnamese-document-embedding"
 st.set_page_config(page_title="Upload document", page_icon="📈")
@@ -68,9 +77,13 @@ def save_pre_appendix_text_type1_to_db(extracted_text, heading, embedding_model)
     for chunk in preprocessed_chunks:
         chunk.pop("text")
         metadata_lst.append(chunk)
-    save_to_db(texts, metadata_lst, embedding_model)
 
-    
+    batch_size = 3    
+    print("☑️ saving pre-appendix data")
+
+    for i in stqdm(range(0, len(metadata_lst), batch_size)):
+        save_to_db(texts[i:i+batch_size],metadata_lst[i:i+batch_size], embedding_model)
+
 
 def save_appendix_text_type1_to_db(document, heading):
     extracted_text = []
@@ -107,7 +120,11 @@ def save_appendix_text_type1_to_db(document, heading):
     for chunk in preprocessed_chunks:
         chunk.pop("text")
         metadata_lst.append(chunk)
-    save_to_db(texts, metadata_lst, embedding_model)
+
+    batch_size = 3    
+    print("☑️ saving appendix data")
+    for i in stqdm(range(0, len(metadata_lst), batch_size)):
+        save_to_db(texts[i:i+batch_size],metadata_lst[i:i+batch_size], embedding_model)
 
     
 if st.button("Upload to database"):

@@ -11,6 +11,12 @@ import torch
 import faiss
 import numpy as np
 import pickle
+import os
+PATH = 'D:/VS_Workspace/LLM/.cache'
+os.environ['TRANSFORMERS_CACHE'] = PATH
+os.environ['HF_HOME'] = PATH
+os.environ['HF_DATASETS_CACHE'] = PATH
+os.environ['TORCH_HOME'] = PATH
 
 class RAGQwen():
     def __init__(self, vector_db_path = "vectorstores/db_faiss", 
@@ -22,7 +28,7 @@ class RAGQwen():
         self.model_file = model_file
         # Initialize the embedding model
         # if embedding_model == None:
-        self.embedding_model = SentenceTransformer('dangvantuan/vietnamese-document-embedding', trust_remote_code=True, device="cpu")
+        self.embedding_model = SentenceTransformer('dangvantuan/vietnamese-document-embedding', trust_remote_code=True)
         # else:
         #     print("Founded existing embedding model")
         #     self.embedding_model = embedding_model
@@ -48,7 +54,7 @@ class RAGQwen():
         ### Trả lời :'''
 
         # Khởi tạo mô hình LLM và tokenizer
-        self.model, self.tokenizer = self.load_huggingface_model(self.model_file)
+        # self.model, self.tokenizer = self.load_huggingface_model(self.model_file)
     def load_faiss_and_data(self, index_path, metadata_path):
         index = faiss.read_index(index_path)
         with open(metadata_path, "rb") as f:
