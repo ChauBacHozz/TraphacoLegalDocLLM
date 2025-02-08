@@ -136,7 +136,7 @@ def normalize_appendix_text_bullets(extract_text, appendix_heading_ids):
                 last_heading = True
                 post_heading = True
                 if bullets[-1].count(">") > 0:
-                    bullets.append(str(bullets[-1].split(" > ")[:-1]) + text)
+                    bullets.append(" ".join(bullets[-1].split(" > ")[:-1]) + text)
                 else:
                     bullets[-1] = bullets[-1] + " > " + text
                 continue
