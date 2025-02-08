@@ -72,6 +72,8 @@ def normalize_appendix_text_bullets(extract_text, appendix_heading_ids):
             else:
                 toc_idx = toc.index(text.lower().strip())
                 break 
+        if len(toc) > 30:
+            return []
         return toc[toc_idx:]
     
     def is_heading(text):
@@ -79,7 +81,7 @@ def normalize_appendix_text_bullets(extract_text, appendix_heading_ids):
         if len(text) < 100:  # Headings are usually shorter
             if re.match(r'^[A-Za-z]\)\s+', text):  # Exclude lines starting with 'A)', 'b)', etc.
                 return False
-            if text[0] == "(":  # Exclude "(a)", "(b)", "(c)"
+            if text[0] in ["-", "(", ")", "+", "*"]:  # Exclude "(a)", "(b)", "(c)"
                 return False
             if text.isupper():  # All Caps
                 return True
@@ -106,10 +108,10 @@ def normalize_appendix_text_bullets(extract_text, appendix_heading_ids):
         heading = heading.replace("\n", " ")
         # toc = detect_TOC(chunk)
         bullets = []
-        toc = []
+        toc = detect_TOC(chunk[2:])
         last_heading = False
         post_heading = False
-        for text in chunk[2:]:
+        for text in chunk[2 + len(toc):]:
             if text in toc and post_heading:
                 temp = str(bullets[-1].split(" > ")[:-1])
                 bullets.append(temp + " > " + text)
@@ -122,7 +124,12 @@ def normalize_appendix_text_bullets(extract_text, appendix_heading_ids):
             #     continue
             if len(bullets) > 0:
                 if text.lower() == bullets[0].split(" > ")[0].lower():
-                    toc = bullets[0].split(" > ")
+                    # The line `toc = bullets[0].split(" > ")` is splitting the first element of the
+                    # `bullets` list by the separator " > " and assigning the result to the variable
+                    # `toc`. This operation is used to extract individual components from the first
+                    # element of the `bullets` list, assuming that the elements are separated by " >
+                    # ".
+                    # toc = bullets[0].split(" > ")
                     last_heading = True
                     post_heading = False 
                     bullets.append(text)
@@ -136,7 +143,7 @@ def normalize_appendix_text_bullets(extract_text, appendix_heading_ids):
                 last_heading = True
                 post_heading = True
                 if bullets[-1].count(">") > 0:
-                    bullets.append(" ".join(bullets[-1].split(" > ")[:-1]) + text)
+                    bullets.append(" ".join(bullets[-1].split(" > ")[:-1]) + " > " + text)
                 else:
                     bullets[-1] = bullets[-1] + " > " + text
                 continue
@@ -159,6 +166,7 @@ def normalize_appendix_text_bullets(extract_text, appendix_heading_ids):
                     temp = "> " + temp
                 bullet = heading + " " + temp + bullet 
                 res.append(bullet)
+    print("---------TOC:", toc)
             # break
     return res
 
