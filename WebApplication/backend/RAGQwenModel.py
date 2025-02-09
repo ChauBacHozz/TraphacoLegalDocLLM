@@ -57,13 +57,15 @@ class RAGQwen():
 
         # Khởi tạo mô hình LLM và tokenizer
         # self.model, self.tokenizer = self.load_huggingface_model(self.model_file)
-    def load_faiss_and_data(self, index_path, metadata_path):
+    def load_faiss_and_data(self, index_path, data_path, metadata_path):
         index = faiss.read_index(index_path)
-        with open(metadata_path, "rb") as f:
+        with open(data_path, "rb") as f:
             data = pickle.load(f)
-        return index, data
+        with open(metadata_path, "rb") as f:
+            meta_data = pickle.load(f)
+        return index, data, meta_data
     def get_model_ready(self):
-        self.index, self.loaded_data = self.load_faiss_and_data("db/faiss_index.bin", "db/data.pkl")
+        self.index, self.loaded_data, self.loaded_metadata = self.load_faiss_and_data("db/faiss_index.bin", "db/data.pkl", "db/metadata.pkl")
         self.texts = [data for data in self.loaded_data]
         self.tokenized_docs = [doc.split() for doc in self.texts]
     def count_tokens_underthesea(self, text):

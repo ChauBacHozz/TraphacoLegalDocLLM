@@ -51,13 +51,18 @@ def normalize_bullets(extract_text):
         bullet = "###"
         if len(first_token.strip()) > 0:
             bullet = re.split(r"[.,;)]",first_token)[0]
+        if (not check_in_first3(bullet.lower())) and tracking:
+            full_text[-1] = full_text[-1] + " > " + para
+            continue
+        if (not check_in_first3(bullet.lower())) and (not tracking):
+            full_text[-1] = full_text[-1] + ". " + para
+            if "Thông tư này quy định việc công bố áp dụng và đánh giá việc đáp ứng Thực hành tốt phân phối thuốc, nguyên liệu làm thuốc." in para:
+                print("CHECKKKKKKKKKKKKKKKKK")
+            continue
         if check_in_first3(bullet.lower()):
             tracking = True
         else:
             tracking = False
-        if (not check_in_first3(bullet.lower())) and (not tracking):
-            full_text[-1] = full_text[-1] + " > " + para
-            continue
         full_text.append(para)
     return full_text
 
@@ -150,7 +155,7 @@ def normalize_appendix_text_bullets(extract_text, appendix_heading_ids):
 
             if is_heading(text) == False and last_heading:
                 last_heading = False
-                bullets[-1] = bullets[-1] + ":" + text
+                bullets[-1] = bullets[-1] + " > " + text
                 continue
 
             if is_heading(text) == False and last_heading == False:

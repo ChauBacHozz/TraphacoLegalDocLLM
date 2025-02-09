@@ -113,7 +113,7 @@ def save_appendix_text_type1_to_db(document, heading, doc_number, embedding_mode
     # # chunks = [f"{path}: {text}" for path, text in flattened_tree]
     # # Preprocess chunks
     preprocessed_chunks = preprocess_chunks(chunks, heading, doc_number)
-    ic(preprocessed_chunks)
+    # ic(preprocessed_chunks)
 
     # # Extract 'text' atribute from preprocessed_chunks
     texts = [chunk['content'] for chunk in preprocessed_chunks]
