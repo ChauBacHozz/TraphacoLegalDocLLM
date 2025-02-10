@@ -58,20 +58,27 @@ class RAGQwen():
         # Khởi tạo mô hình LLM và tokenizer
         # self.model, self.tokenizer = self.load_huggingface_model(self.model_file)
     def load_faiss_and_data(self, index_path, path_index_path, data_path, metadata_path):
-        index = faiss.read_index(path_index_path)
+        index = faiss.read_index(index_path)
+        path_index = faiss.read_index(path_index_path)
         with open(data_path, "rb") as f:
             data = pickle.load(f)
         with open(metadata_path, "rb") as f:
             meta_data = pickle.load(f)
-        return index, data, meta_data
+        return index, path_index, data, meta_data
+    
     def get_model_ready(self):
-        self.index, self.loaded_data, self.loaded_metadata = self.load_faiss_and_data("db/faiss_index.bin", "db/faiss_path_index.bin", "db/data.pkl", "db/metadata.pkl")
-        self.texts = [mtdata["path"] for mtdata in self.loaded_metadata]
+        self.index, self.path_index, self.loaded_data, self.loaded_metadata = self.load_faiss_and_data("db/faiss_index.bin", "db/faiss_path_index.bin", "db/data.pkl", "db/metadata.pkl")
+        self.paths = [mtdata["path"] for mtdata in self.loaded_metadata]
+        self.texts = [data for data in self.loaded_data]
+
+        self.tokenized_paths = [path.split() for path in self.paths]
         self.tokenized_docs = [doc.split() for doc in self.texts]
+
+        
     def count_tokens_underthesea(self, text):
         tokens = word_tokenize(text, format="text").split()
         return len(tokens)
-    def search_query(self, query: str):
+    def search_query_from_path(self, query: str):
         """
         Perform a similarity search on the vector database.
         
@@ -80,23 +87,25 @@ class RAGQwen():
         :return: The top results as a list of strings.
         """
         query_embedding = self.embedding_model.encode([query], convert_to_numpy=True)
-        bm25 = BM25Okapi(self.tokenized_docs)
+        bm25 = BM25Okapi(self.tokenized_paths)
         
         n_contexts = 6
         # Dense Retrieval (FAISS)
-        D, I = self.pathindex.search(query_embedding, k=n_contexts)  # Retrieve top-3 similar docs
-        dense_results = [self.texts[i] for i in I[0]]
+        D, I = self.path_index.search(query_embedding, k=n_contexts)  # Retrieve top-3 similar docs
+        dense_results = [self.paths[i] for i in I[0]]
         dense_scores = D[0]
 
         # Sparse Retrieval (BM25)
         query_tokens = query.split()
         bm25_scores = bm25.get_scores(query_tokens)
         top_k_bm25 = sorted(range(len(bm25_scores)), key=lambda i: bm25_scores[i], reverse=True)[:n_contexts]
-        sparse_results = [self.texts[i] for i in top_k_bm25]
+        sparse_results = [self.paths[i] for i in top_k_bm25]
         sparse_scores = [bm25_scores[i] for i in top_k_bm25]
 
 
         scaler = MinMaxScaler()
+
+
 
         # Normalize FAISS scores
         dense_scores = np.array(dense_scores).reshape(-1, 1)
@@ -105,6 +114,8 @@ class RAGQwen():
         dense_scores = scaler.fit_transform(dense_scores).flatten()
         sparse_scores = scaler.fit_transform(sparse_scores).flatten()
 
+        print("Dense scores:", dense_scores)
+        print("Spares scores:", sparse_scores)
         # Weighted Hybrid Scoring (Adjust Weights as Needed)
         hybrid_results = []
         for i, doc in enumerate(dense_results):
@@ -115,8 +126,13 @@ class RAGQwen():
 
         # Sort by Final Score
         hybrid_results.sort(reverse=True, key=lambda x: x[0])
-        final_passages = [doc for _, doc in hybrid_results]
+        final_passages = [ doc for score, doc in hybrid_results]
         return final_passages
+    
+    def get_retrieval_data(self, query: str):
+        # CHECK IF QUERY IS A HEADER OR NOT
+        res = self.search_query_from_path(query)
+        return res
     
     def load_huggingface_model(self,model_file):
         quantization_config = BitsAndBytesConfig(
@@ -143,7 +159,7 @@ class RAGQwen():
         return [result.page_content for result in results]
     
     def rag_answer(self, prompt):
-        context_list = self.search_query(prompt)
+        context_list = self.get_retrieval_data(prompt)
         n_tokens = 0
         for context in context_list:
             n_tokens += self.count_tokens_underthesea(context)
