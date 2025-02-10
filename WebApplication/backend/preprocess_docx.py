@@ -38,6 +38,7 @@ def normalize_bullets(extract_text):
     full_text = []
     c_check = False
     tracking = False
+    last_tracking = False
     for i, para in enumerate(text):
         if c_check == True:
             c_check = False
@@ -51,19 +52,36 @@ def normalize_bullets(extract_text):
         bullet = "###"
         if len(first_token.strip()) > 0:
             bullet = re.split(r"[.,;)]",first_token)[0]
-        if (not check_in_first3(bullet.lower())) and tracking:
-            full_text[-1] = full_text[-1] + " > " + para
-            continue
-        if (not check_in_first3(bullet.lower())) and (not tracking):
-            full_text[-1] = full_text[-1] + ". " + para
-            if "Thông tư này quy định việc công bố áp dụng và đánh giá việc đáp ứng Thực hành tốt phân phối thuốc, nguyên liệu làm thuốc." in para:
-                print("CHECKKKKKKKKKKKKKKKKK")
-            continue
+        # if tracking:
+
+        # if (not check_in_first3(bullet.lower())) and (not tracking):
+        #     full_text[-1] = full_text[-1] + ". " + para
+        #     if "Thông tư này quy định việc công bố áp dụng và đánh giá việc đáp ứng Thực hành tốt phân phối thuốc, nguyên liệu làm thuốc." in para:
+        #         print("CHECKKKKKKKKKKKKKKKKK")
+        #     continue
         if check_in_first3(bullet.lower()):
             tracking = True
+            last_tracking = True
+            full_text.append(para)
         else:
             tracking = False
-        full_text.append(para)
+            full_text[-1] = full_text[-1] + ". " + para
+        # if (not check_in_first3(bullet.lower())) and (not last_tracking):
+        #     # print("Check1")
+        #     full_text[-1] = full_text[-1] + " - " + para
+        #     if check_in_first3(bullet.lower()):
+        #         last_tracking = True
+        #     else:
+        #         last_tracking = False
+        #     continue
+        # if (not check_in_first3(bullet.lower())) and (last_tracking):
+        #     print("Check2")
+        #     full_text[-1] = full_text[-1] + " > " + para
+        #     if check_in_first3(bullet.lower()):
+        #         last_tracking = True
+        #     else:
+        #         last_tracking = False
+        #     continue
     return full_text
 
 def normalize_appendix_text_bullets(extract_text, appendix_heading_ids):
