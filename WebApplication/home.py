@@ -2,11 +2,11 @@ import streamlit as st
 from sentence_transformers import SentenceTransformer
 from backend.RAGQwenModel import RAGQwen
 import os
-PATH = 'D:/VS_Workspace/LLM/.cache'
-os.environ['TRANSFORMERS_CACHE'] = PATH
-os.environ['HF_HOME'] = PATH
-os.environ['HF_DATASETS_CACHE'] = PATH
-os.environ['TORCH_HOME'] = PATH
+# PATH = 'D:/VS_Workspace/LLM/.cache'
+# os.environ['TRANSFORMERS_CACHE'] = PATH
+# os.environ['HF_HOME'] = PATH
+# os.environ['HF_DATASETS_CACHE'] = PATH
+# os.environ['TORCH_HOME'] = PATH
 
 st.set_page_config(
     page_title = "Home",

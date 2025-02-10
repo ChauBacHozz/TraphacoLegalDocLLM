@@ -29,8 +29,8 @@ def normalize_bullets(extract_text):
     def check_in_first3(bullet, end_bullet_idx = 4):
         for i in range(end_bullet_idx):
             if  bullet in bullet_levels1[i]:
-                return True
-        return False
+                return True, i
+        return False, None
     
     text = extract_text
     tree = OrderedDict()
@@ -59,12 +59,17 @@ def normalize_bullets(extract_text):
         #     if "Thông tư này quy định việc công bố áp dụng và đánh giá việc đáp ứng Thực hành tốt phân phối thuốc, nguyên liệu làm thuốc." in para:
         #         print("CHECKKKKKKKKKKKKKKKKK")
         #     continue
-        if check_in_first3(bullet.lower()):
+        in_first3, index = check_in_first3(bullet.lower())
+        if tracking and index == 2:
+            para = para + " > "
+
+        if in_first3:
             tracking = True
             last_tracking = True
             full_text.append(para)
         else:
             tracking = False
+            last_tracking = False
             full_text[-1] = full_text[-1] + ". " + para
         # if (not check_in_first3(bullet.lower())) and (not last_tracking):
         #     # print("Check1")
@@ -290,15 +295,17 @@ def preprocess_chunks(chunks, heading, doc_number):
             else:
                 doc_id = idx + 1
             combined_text = doc_id + " > " + chunk
-            path = ">".join(match[:-1])
+            path = []
+            for i in match[:-1]:
+                if len(i.strip()) > 0:
+                    path.append(i)
+            path = ">".join(path)
             # Append structured data
+            
             processed_chunks.append({
-                "id": doc_id,          # Unique ID for each chunk
-                # "heading": heading,     # Document heading
-                # "heading1": chapter,     # Chapter name
-                # "heading2": section,     # Section name (if any)
-                # "heading3": article,     # Article name
-                "path": path,
+                "doc_number": doc_number,
+                "doc_id": doc_id,          # Unique ID for each chunk
+                "path": heading + " > " +path,
                 "content": content,     # Content text
             })
         else:

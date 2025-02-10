@@ -14,11 +14,11 @@ import pickle
 import os
 from underthesea import word_tokenize
 
-PATH = 'D:/VS_Workspace/LLM/.cache'
-os.environ['TRANSFORMERS_CACHE'] = PATH
-os.environ['HF_HOME'] = PATH
-os.environ['HF_DATASETS_CACHE'] = PATH
-os.environ['TORCH_HOME'] = PATH
+# PATH = 'D:/VS_Workspace/LLM/.cache'
+# os.environ['TRANSFORMERS_CACHE'] = PATH
+# os.environ['HF_HOME'] = PATH
+# os.environ['HF_DATASETS_CACHE'] = PATH
+# os.environ['TORCH_HOME'] = PATH
 
 class RAGQwen():
     def __init__(self, vector_db_path = "vectorstores/db_faiss", 
@@ -57,16 +57,16 @@ class RAGQwen():
 
         # Khởi tạo mô hình LLM và tokenizer
         # self.model, self.tokenizer = self.load_huggingface_model(self.model_file)
-    def load_faiss_and_data(self, index_path, data_path, metadata_path):
-        index = faiss.read_index(index_path)
+    def load_faiss_and_data(self, index_path, path_index_path, data_path, metadata_path):
+        index = faiss.read_index(path_index_path)
         with open(data_path, "rb") as f:
             data = pickle.load(f)
         with open(metadata_path, "rb") as f:
             meta_data = pickle.load(f)
         return index, data, meta_data
     def get_model_ready(self):
-        self.index, self.loaded_data, self.loaded_metadata = self.load_faiss_and_data("db/faiss_index.bin", "db/data.pkl", "db/metadata.pkl")
-        self.texts = [data for data in self.loaded_data]
+        self.index, self.loaded_data, self.loaded_metadata = self.load_faiss_and_data("db/faiss_index.bin", "db/faiss_path_index.bin", "db/data.pkl", "db/metadata.pkl")
+        self.texts = [mtdata["path"] for mtdata in self.loaded_metadata]
         self.tokenized_docs = [doc.split() for doc in self.texts]
     def count_tokens_underthesea(self, text):
         tokens = word_tokenize(text, format="text").split()
@@ -84,7 +84,7 @@ class RAGQwen():
         
         n_contexts = 6
         # Dense Retrieval (FAISS)
-        D, I = self.index.search(query_embedding, k=n_contexts)  # Retrieve top-3 similar docs
+        D, I = self.pathindex.search(query_embedding, k=n_contexts)  # Retrieve top-3 similar docs
         dense_results = [self.texts[i] for i in I[0]]
         dense_scores = D[0]
 

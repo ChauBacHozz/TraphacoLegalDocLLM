@@ -15,11 +15,11 @@ from tqdm import tqdm
 from stqdm import stqdm
 import re
 
-PATH = 'D:/VS_Workspace/LLM/.cache'
-os.environ['TRANSFORMERS_CACHE'] = PATH
-os.environ['HF_HOME'] = PATH
-os.environ['HF_DATASETS_CACHE'] = PATH
-os.environ['TORCH_HOME'] = PATH
+# PATH = 'D:/VS_Workspace/LLM/.cache'
+# os.environ['TRANSFORMERS_CACHE'] = PATH
+# os.environ['HF_HOME'] = PATH
+# os.environ['HF_DATASETS_CACHE'] = PATH
+# os.environ['TORCH_HOME'] = PATH
 
 EMBEDDING_MODEL_NAME = "dangvantuan/vietnamese-document-embedding"
 st.set_page_config(page_title="Upload document", page_icon="📈")
@@ -65,6 +65,7 @@ def save_pre_appendix_text_type1_to_db(extracted_text, heading, doc_number, embe
     
     # Flatten tree into list of strings
     flattened_tree = flatten_tree(tree)
+    ic(flattened_tree)
     # Split data into chunks
     chunks = [text[0] for text in flattened_tree]
     # chunks = [f"{path}: {text}" for path, text in flattened_tree]
