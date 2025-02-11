@@ -38,7 +38,7 @@ if os.path.exists(FAISS_INDEX_PATH) and os.path.exists(METADATA_PATH) and os.pat
         metadata = pickle.load(f)
     with open(DATA_PATH, "rb") as f:
         data = pickle.load(f)
-
+    ic(metadata)
     df = pd.DataFrame(metadata)
     st.dataframe(df, use_container_width=True)
 else:

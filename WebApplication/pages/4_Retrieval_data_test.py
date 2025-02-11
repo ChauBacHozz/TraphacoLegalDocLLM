@@ -6,8 +6,9 @@ def count_tokens_underthesea(text):
     return len(tokens)
 
 def on_drection_change():
-    st.session_state.direction = st.session_state.direction_pill
-    st.session_state.direction_pill = None
+    st.session_state.useroption = st.session_state.useroption_pill
+    st.session_state.useroption_pill = None
+    print(f"You selected {st.session_state.useroption}")
 
 if "rag_model" in st.session_state:
     rag_model = st.session_state.rag_model
@@ -32,10 +33,9 @@ if prompt := st.chat_input("Enter your RAG query..."):
     #         st.markdown(data)
     with st.chat_message("assistant"):
         # message_container = st.empty()  # Create a container to display the text
-        st.session_state.setdefault("direction", None)
-        directions = ["North", "East", "South", "West"]
-        st.pills("Direction", options=directions, on_change=on_drection_change, key="direction_pill")
-        st.write(f"You selected **{st.session_state.direction}**")
+        st.session_state.setdefault("useroption", None)
+        useroptions = ["Lấy nội dung từ đề mục", "Lấy nội dung từ đề mục con"]
+        st.pills("User options", options=useroptions, on_change=on_drection_change, key="useroption_pill")
         
 # import streamlit as st
 # st.set_page_config(layout="wide")

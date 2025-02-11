@@ -3,6 +3,9 @@ import faiss
 import pickle
 import os
 from icecream import ic
+import base64
+import hashlib
+
 
 def save_to_db(new_texts, new_metadata, model):
     # Paths for FAISS index and metadata
@@ -65,6 +68,14 @@ def save_to_db(new_texts, new_metadata, model):
     # Append new data
     data.extend(new_texts)
 
+
+    # Add id to current new_metadata
+    for i, mtdata in enumerate(new_metadata):
+        # bytes_representation = mtdata["path"].encode(encoding="utf-8") 
+        bytes_representation = str(mtdata["doc_id"] + mtdata["path"] + str(len(metadata) + i + 1)).encode("utf-8")
+        hash_object = hashlib.sha256(bytes_representation)  # Use SHA-256 (or hashlib.md5 for a smaller hash)
+        hash_int = int(hash_object.hexdigest(), 16) % (10**10)
+        mtdata["id"] = hash_int
     # Append new data
     metadata.extend(new_metadata)
 

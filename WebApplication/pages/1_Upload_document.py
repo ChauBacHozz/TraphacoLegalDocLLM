@@ -33,7 +33,7 @@ st.set_page_config(page_title="Upload document", page_icon="📈")
 if "embedding_model" in st.session_state:
     embedding_model = st.session_state.embedding_model
 else:
-    st.write("No data found in session state.")
+    embedding_model = SentenceTransformer(EMBEDDING_MODEL_NAME, trust_remote_code=True)
     
 st.markdown("# Upload document")
 st.sidebar.header("Upload your document")
@@ -147,7 +147,8 @@ if st.button("Upload to database"):
         heading = ": ".join(extracted_text[:2])
         # Type 1
         if "nghị định" in heading.lower() or "thông tư" in heading.lower():
-            print("Nghị định hoặc thông tư")
+            if "sửa đổi" in heading.lower():
+
             if appendix_index != None:
                 print("Có phụ lục")
                 save_appendix_text_type1_to_db(doc_file, heading, doc_number, embedding_model)
@@ -162,5 +163,4 @@ if st.button("Upload to database"):
         else:
             print("ERROR")
         # Merge bullet from extracted text
-
 
