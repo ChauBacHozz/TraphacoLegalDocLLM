@@ -70,12 +70,18 @@ def save_to_db(new_texts, new_metadata, driver):
 
 
     # # Add id to current new_metadata
-    # for i, mtdata in enumerate(new_metadata):
-    #     # bytes_representation = mtdata["path"].encode(encoding="utf-8") 
-    #     bytes_representation = str(mtdata["doc_id"] + mtdata["path"] + str(len(metadata) + i + 1)).encode("utf-8")
-    #     hash_object = hashlib.sha256(bytes_representation)  # Use SHA-256 (or hashlib.md5 for a smaller hash)
-    #     hash_int = int(hash_object.hexdigest(), 16) % (10**10)
-    #     mtdata["id"] = hash_int
+    def count_nodes(tx):
+        query = "MATCH (n) RETURN count(n) AS node_count"
+        result = tx.run(query)
+        return result.single()["node_count"]
+    with driver.session() as session:
+        node_count = session.execute_read(count_nodes)
+    for i, mtdata in enumerate(new_metadata):
+        # bytes_representation = mtdata["path"].encode(encoding="utf-8") 
+        bytes_representation = str(mtdata["doc_id"] + mtdata["middle_path"] + str(node_count + i + 1)).encode("utf-8")
+        hash_object = hashlib.sha256(bytes_representation)  # Use SHA-256 (or hashlib.md5 for a smaller hash)
+        hash_int = int(hash_object.hexdigest(), 16) % (10**10)
+        mtdata["id"] = hash_int
     # # Append new data
     # metadata.extend(new_metadata)
 
@@ -91,31 +97,31 @@ def save_to_db(new_texts, new_metadata, driver):
         root_node_content = metadata["heading"]
         root_id = metadata["doc_id"]
         content = metadata["content"]
-
+        id = metadata["id"]
         # Create root node
         tx.run("MERGE (p: P_Node {content: $content, root_id: $id})", content = root_node_content, id = root_id)
 
         # Create content node
-        tx.run("MERGE (p: C_Node {content: $content, root_id: $id})", content = content, id = root_id)
+        tx.run("MERGE (p: C_Node {content: $content, c_id: $id})", content = content, id = id)
 
         # Create middle nodes
         middle_node_names = metadata["middle_path"].split(" > ")
         for middle_node in middle_node_names:
-            tx.run("MERGE (p: M_Node {content: $content, root_id: $id})", content = middle_node, id = root_id)
+            tx.run("MERGE (p: M_Node {content: $content, c_id: $id})", content = middle_node, id = root_id)
         # Connect root node to first middle node
         tx.run("""
-            MATCH (a:P_Node {content: $p_content, root_id: $id}), (b:M_Node {content: $m_content, root_id: $id})
+            MATCH (a:P_Node {content: $p_content, root_id: $root_id}), (b:M_Node {content: $m_content, c_id: $id})
             MERGE (a)-[:PARRENT]->(b)
-        """, p_content=root_node_content, m_content=middle_node_names[0], id = root_id)
+        """, p_content=root_node_content, m_content=middle_node_names[0], root_id = root_id, id = root_id)
         # Connect last middle node to content node
         tx.run("""
-            MATCH (a:M_Node {content: $m_content, root_id: $id}), (b:C_Node {content: $c_content, root_id: $id})
+            MATCH (a:M_Node {content: $m_content, c_id: $root_id}), (b:C_Node {content: $c_content, c_id: $id})
             MERGE (a)-[:CONTAIN]->(b)
-        """, m_content=middle_node_names[-1], c_content=content, id = root_id)
+        """, m_content=middle_node_names[-1], c_content=content, root_id = root_id, id = id)
         # Connect middle nodes
         for i in range(len(middle_node_names) - 1):
             tx.run("""
-                MATCH (a:M_Node {content: $node1, root_id: $id}), (b:M_Node {content: $node2, root_id: $id})
+                MATCH (a:M_Node {content: $node1, c_id: $id}), (b:M_Node {content: $node2, c_id: $id})
                 MERGE (a)-[:NEXT]->(b)
             """, node1=middle_node_names[i], node2=middle_node_names[i + 1], id = root_id)
 
