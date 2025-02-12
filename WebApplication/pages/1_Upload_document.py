@@ -14,7 +14,14 @@ import os
 from tqdm import tqdm
 from stqdm import stqdm
 import re
+from neo4j import GraphDatabase
 
+WINDOWS_IP = "28.11.5.39"
+URI = f"bolt://{WINDOWS_IP}:7687"
+USERNAME = "neo4j"
+PASSWORD = "phongthang2012"
+
+driver = GraphDatabase.driver(URI, auth=(USERNAME, PASSWORD))
 # PATH = 'D:/VS_Workspace/LLM/.cache'
 # os.environ['TRANSFORMERS_CACHE'] = PATH
 # os.environ['HF_HOME'] = PATH
@@ -22,6 +29,7 @@ import re
 # os.environ['TORCH_HOME'] = PATH
 
 EMBEDDING_MODEL_NAME = "dangvantuan/vietnamese-document-embedding"
+
 st.set_page_config(page_title="Upload document", page_icon="📈")
 
 # @st.cache_resource
@@ -46,7 +54,7 @@ upload_files = st.file_uploader(
 )
 
 
-def save_pre_appendix_text_type1_to_db(extracted_text, heading, doc_number, embedding_model):
+def save_pre_appendix_text_type1_to_db(extracted_text, heading, doc_number, driver):
     heading_idx = None
     for i, text in enumerate(extracted_text[:100]):
         if "chương" in text.lower():
@@ -75,17 +83,17 @@ def save_pre_appendix_text_type1_to_db(extracted_text, heading, doc_number, embe
     texts = [chunk['content'] for chunk in preprocessed_chunks]
     metadata_lst = []
     for chunk in preprocessed_chunks:
-        chunk.pop("content")
+        # chunk.pop("content")
         metadata_lst.append(chunk)
 
-    batch_size = 3    
+    batch_size = 10    
     print("☑️ saving pre-appendix data")
 
     for i in stqdm(range(0, len(metadata_lst), batch_size)):
-        save_to_db(texts[i:i+batch_size],metadata_lst[i:i+batch_size], embedding_model)
+        save_to_db(texts[i:i+batch_size],metadata_lst[i:i+batch_size], driver)
 
 
-def save_appendix_text_type1_to_db(document, heading, doc_number, embedding_model):
+def save_appendix_text_type1_to_db(document, heading, doc_number, driver):
     extracted_text = []
     appendix_ids = []
     temp_idx = 0
@@ -120,13 +128,13 @@ def save_appendix_text_type1_to_db(document, heading, doc_number, embedding_mode
     texts = [chunk['content'] for chunk in preprocessed_chunks]
     metadata_lst = []
     for chunk in preprocessed_chunks:
-        chunk.pop("content")
+        # chunk.pop("content")
         metadata_lst.append(chunk)
 
-    batch_size = 3    
+    batch_size = 10    
     print("☑️ saving appendix data")
     for i in stqdm(range(0, len(metadata_lst), batch_size)):
-        save_to_db(texts[i:i+batch_size],metadata_lst[i:i+batch_size], embedding_model)
+        save_to_db(texts[i:i+batch_size],metadata_lst[i:i+batch_size], driver)
 
     
 if st.button("Upload to database"):
@@ -147,12 +155,12 @@ if st.button("Upload to database"):
         heading = ": ".join(extracted_text[:2])
         # Type 1
         if "nghị định" in heading.lower() or "thông tư" in heading.lower():
-            if "sửa đổi" in heading.lower():
+            # if "sửa đổi" in heading.lower():
 
             if appendix_index != None:
                 print("Có phụ lục")
-                save_appendix_text_type1_to_db(doc_file, heading, doc_number, embedding_model)
-            save_pre_appendix_text_type1_to_db(pre_appendix_text, heading, doc_number, embedding_model)
+                save_appendix_text_type1_to_db(doc_file, heading, doc_number, driver)
+            save_pre_appendix_text_type1_to_db(pre_appendix_text, heading, doc_number, driver)
             st.toast(f"Saved {upload_file.name} database✅")
 
         elif "luật" in heading.lower():

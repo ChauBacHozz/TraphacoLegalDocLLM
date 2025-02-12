@@ -305,7 +305,8 @@ def preprocess_chunks(chunks, heading, doc_number):
             processed_chunks.append({
                 "doc_number": doc_number,
                 "doc_id": doc_id,          # Unique ID for each chunk
-                "path": heading + " > " +path,
+                "heading": heading,
+                "middle_path": path,
                 "content": content,     # Content text
             })
         else:
