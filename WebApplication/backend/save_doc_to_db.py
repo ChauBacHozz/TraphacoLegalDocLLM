@@ -78,6 +78,9 @@ def save_to_db(new_texts, new_metadata, driver):
         node_count = session.execute_read(count_nodes)
     for i, mtdata in enumerate(new_metadata):
         # bytes_representation = mtdata["path"].encode(encoding="utf-8") 
+        if len(mtdata["content"].strip()) == 0:
+            print("----------CHECK---------")
+            ic(mtdata)
         bytes_representation = str(mtdata["doc_id"] + mtdata["middle_path"] + str(node_count + i + 1)).encode("utf-8")
         hash_object = hashlib.sha256(bytes_representation)  # Use SHA-256 (or hashlib.md5 for a smaller hash)
         hash_int = int(hash_object.hexdigest(), 16) % (10**10)
@@ -99,29 +102,29 @@ def save_to_db(new_texts, new_metadata, driver):
         content = metadata["content"]
         id = metadata["id"]
         # Create root node
-        tx.run("MERGE (p: P_Node {content: $content, root_id: $id})", content = root_node_content, id = root_id)
+        tx.run("MERGE (p:Doc_Node {content: $content, d_id: $id})", content = root_node_content, id = root_id)
 
         # Create content node
-        tx.run("MERGE (p: C_Node {content: $content, c_id: $id})", content = content, id = id)
+        tx.run("MERGE (p:Doc_Node {content: $content, d_id: $id})", content = content, id = id)
 
         # Create middle nodes
         middle_node_names = metadata["middle_path"].split(" > ")
         for middle_node in middle_node_names:
-            tx.run("MERGE (p: M_Node {content: $content, c_id: $id})", content = middle_node, id = root_id)
+            tx.run("MERGE (p:Doc_Node {content: $content, d_id: $id})", content = middle_node, id = root_id)
         # Connect root node to first middle node
         tx.run("""
-            MATCH (a:P_Node {content: $p_content, root_id: $root_id}), (b:M_Node {content: $m_content, c_id: $id})
+            MATCH (a:Doc_Node {content: $p_content, d_id: $root_id}), (b:Doc_Node {content: $m_content, d_id: $id})
             MERGE (a)-[:PARRENT]->(b)
         """, p_content=root_node_content, m_content=middle_node_names[0], root_id = root_id, id = root_id)
         # Connect last middle node to content node
         tx.run("""
-            MATCH (a:M_Node {content: $m_content, c_id: $root_id}), (b:C_Node {content: $c_content, c_id: $id})
+            MATCH (a:Doc_Node{content: $m_content, d_id: $root_id}), (b:Doc_Node {content: $c_content, d_id: $id})
             MERGE (a)-[:CONTAIN]->(b)
         """, m_content=middle_node_names[-1], c_content=content, root_id = root_id, id = id)
         # Connect middle nodes
         for i in range(len(middle_node_names) - 1):
             tx.run("""
-                MATCH (a:M_Node {content: $node1, c_id: $id}), (b:M_Node {content: $node2, c_id: $id})
+                MATCH (a:Doc_Node {content: $node1, d_id: $id}), (b:Doc_Node {content: $node2, d_id: $id})
                 MERGE (a)-[:NEXT]->(b)
             """, node1=middle_node_names[i], node2=middle_node_names[i + 1], id = root_id)
 

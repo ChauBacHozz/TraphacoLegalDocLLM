@@ -73,7 +73,6 @@ def save_pre_appendix_text_type1_to_db(extracted_text, heading, doc_number, driv
     
     # Flatten tree into list of strings
     flattened_tree = flatten_tree(tree)
-    ic(flattened_tree)
     # Split data into chunks
     chunks = [text[0] for text in flattened_tree]
     # chunks = [f"{path}: {text}" for path, text in flattened_tree]
