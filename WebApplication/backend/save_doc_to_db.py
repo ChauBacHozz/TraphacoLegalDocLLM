@@ -114,7 +114,7 @@ def save_to_db(new_texts, new_metadata, driver):
         # Connect root node to first middle node
         tx.run("""
             MATCH (a:Doc_Node {content: $p_content, d_id: $root_id}), (b:Doc_Node {content: $m_content, d_id: $id})
-            MERGE (a)-[:PARRENT]->(b)
+            MERGE (a)-[:CONTAIN]->(b)
         """, p_content=root_node_content, m_content=middle_node_names[0], root_id = root_id, id = root_id)
         # Connect last middle node to content node
         tx.run("""
@@ -125,7 +125,7 @@ def save_to_db(new_texts, new_metadata, driver):
         for i in range(len(middle_node_names) - 1):
             tx.run("""
                 MATCH (a:Doc_Node {content: $node1, d_id: $id}), (b:Doc_Node {content: $node2, d_id: $id})
-                MERGE (a)-[:NEXT]->(b)
+                MERGE (a)-[:CONTAIN]->(b)
             """, node1=middle_node_names[i], node2=middle_node_names[i + 1], id = root_id)
 
         # Create nodes
