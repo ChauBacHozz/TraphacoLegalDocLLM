@@ -5,7 +5,9 @@ import os
 from icecream import ic
 import base64
 import hashlib
-
+from neo4j import GraphDatabase
+from collections import OrderedDict
+import re
 
 def save_to_db(new_texts, new_metadata, driver):
     # Paths for FAISS index and metadata
@@ -100,32 +102,46 @@ def save_to_db(new_texts, new_metadata, driver):
         root_node_content = metadata["heading"]
         root_id = metadata["doc_id"]
         content = metadata["content"]
-        bullet = metadata["bullet"]
         id = metadata["id"]
         # Create root node
-        tx.run("MERGE (p:Doc_Node {content: $content, d_id: $id})", content = root_node_content, id = root_id)
+        tx.run("MERGE (p:Doc_Node:R_Node {content: $content, d_id: $id})", content = root_node_content, id = root_id)
 
-        # Create content node
-        tx.run("MERGE (p:Doc_Node {bullet: $bullet, content: $content, d_id: $id})", bullet = bullet, content = content, id = id)
+        # Create content node, content_bullet = bullet from c_node's content
+        
+        c_bullet = re.split(r"[.,;)]", content)[0]
+        tx.run("MERGE (p:Doc_Node:C_Node {bullet: $bullet, content: $content, d_id: $id})", bullet = c_bullet, content = content, id = id)
 
         # Create middle nodes
         middle_node_names = metadata["middle_path"].split(" > ")
         for middle_node in middle_node_names:
-            tx.run("MERGE (p:Doc_Node {bullet: $bullet, content: $content, d_id: $id})", bullet = bullet, content = middle_node, id = root_id)
+            if "chương" in middle_node.lower():
+                m_bullet = middle_node.split(" ")[1]
+                m_bullet_type = "chương"
+            else:
+                m_bullet = re.split(r"[.,;)]", middle_node)[0]
+                if len(m_bullet.split(" ")) > 1:
+                    m_bullet_type = m_bullet.split(" ")[0].lower()
+                    m_bullet = m_bullet.split(" ")[-1]
+                else:
+                    if m_bullet.isalpha():
+                        m_bullet_type = "khoản"
+                    else:
+                        m_bullet_type = "mục"
+            tx.run("MERGE (p:Doc_Node:M_Node {bullet: $bullet, bullet_type: $bullet_type, content: $content, d_id: $id})", bullet = m_bullet, bullet_type = m_bullet_type, content = middle_node, id = root_id)
         # Connect root node to first middle node
         tx.run("""
-            MATCH (a:Doc_Node {content: $p_content, d_id: $root_id}), (b:Doc_Node {content: $m_content, d_id: $id})
-            MERGE (a)-[:CONTAIN]->(b)
+            MATCH (a:Doc_Node:R_Node {content: $p_content, d_id: $root_id}), (b:Doc_Node:M_Node {content: $m_content, d_id: $id})
+            MERGE (a)-[:PARENT]->(b)
         """, p_content=root_node_content, m_content=middle_node_names[0], root_id = root_id, id = root_id)
         # Connect last middle node to content node
         tx.run("""
-            MATCH (a:Doc_Node{content: $m_content, d_id: $root_id}), (b:Doc_Node {content: $c_content, d_id: $id})
+            MATCH (a:Doc_Node:M_Node {content: $m_content, d_id: $root_id}), (b:Doc_Node:C_Node {content: $c_content, d_id: $id})
             MERGE (a)-[:CONTAIN]->(b)
         """, m_content=middle_node_names[-1], c_content=content, root_id = root_id, id = id)
         # Connect middle nodes
         for i in range(len(middle_node_names) - 1):
             tx.run("""
-                MATCH (a:Doc_Node {content: $node1, d_id: $id}), (b:Doc_Node {content: $node2, d_id: $id})
+                MATCH (a:Doc_Node:M_Node {content: $node1, d_id: $id}), (b:Doc_Node:M_Node {content: $node2, d_id: $id})
                 MERGE (a)-[:CONTAIN]->(b)
             """, node1=middle_node_names[i], node2=middle_node_names[i + 1], id = root_id)
 
@@ -144,3 +160,36 @@ def save_to_db(new_texts, new_metadata, driver):
         with driver.session() as session:
             session.execute_write(create_graph, mtdata)
 
+def save_tree_to_db(tree, driver):
+    def insert_node(tx, parent_name, child_name, child_content, order):
+        """
+        Insert a node and link it to its parent, preserving order.
+        """
+        query = """
+        MERGE (parent:Node {name: $parent_name})
+        MERGE (child:Node {name: $child_name})
+        ON CREATE SET child.content = $child_content, child.order = $order
+        MERGE (parent)-[:HAS_CHILD {order: $order}]->(child)
+        """
+        tx.run(query, parent_name=parent_name, child_name=child_name, child_content=child_content, order=order)
+
+    def process_dict(tx, parent, data, level=0):
+        """
+        Recursively process the nested ordered dictionary and insert into Neo4j.
+        Maintains order using an "order" property.
+        """
+        for index, (key, value) in enumerate(data.items()):
+            if isinstance(value, OrderedDict):  # If value is a dict, create a node and recurse
+                insert_node(tx, parent, key, None, index)  # No direct content, just a node
+                process_dict(tx, key, value, level + 1)  # Recurse deeper
+            else:  # If value is a string, it's the final content
+                insert_node(tx, parent, key, value, index)
+
+    # Insert data into Neo4j
+    with driver.session() as session:
+        session.execute_write(process_dict, "Root", tree)  # "Root" as the top-level node
+
+    # print("Data inserted successfully!")
+
+    # Close connection
+    # driver.close()

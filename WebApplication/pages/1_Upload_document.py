@@ -7,7 +7,7 @@ from sentence_transformers import SentenceTransformer
 from backend.preprocess_docx import (extract_text, normalize_bullets, 
                                      convert_text_list_to_tree, flatten_tree,
                                      preprocess_chunks, normalize_appendix_text_bullets)
-from backend.save_doc_to_db import save_to_db
+from backend.save_doc_to_db import save_to_db, save_tree_to_db
 from icecream import ic
 from collections import OrderedDict
 import os
@@ -71,8 +71,10 @@ def save_pre_appendix_text_type1_to_db(extracted_text, heading, doc_number, driv
     # Convert text list to tree base to manage content 
     tree = convert_text_list_to_tree(full_text)
     
+    # save_tree_to_db(tree, driver)
     # Flatten tree into list of strings
     flattened_tree = flatten_tree(tree)
+    # ic(flattened_tree)
     # Split data into chunks
     chunks = [text[0] for text in flattened_tree]
     # chunks = [f"{path}: {text}" for path, text in flattened_tree]

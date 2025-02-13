@@ -304,16 +304,14 @@ def preprocess_chunks(chunks, heading, doc_number):
                     path.append(i)
             path = ">".join(path)
             # Append structured data
-            content_split = re.split('\s*,\s*.\s*:\s*', content)
-            bullet = content_split[0].lower()
-            content = "".join(content_split)
+            # content_split = re.split('\s*,\s*.\s*:\s*', content)
+            bullet = re.split(r"[.,;)]", content)[0]
              # Ectract Điều 4, Mục 1, khoản ...
             processed_chunks.append({
                 "doc_number": doc_number,
                 "doc_id": doc_id,          # Unique ID for each chunk
                 "heading": heading,
                 "middle_path": path,
-                "bullet": bullet,
                 "content": content,     # Content text
             })
         else:
