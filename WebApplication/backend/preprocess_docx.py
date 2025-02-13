@@ -26,7 +26,7 @@ def extract_text(doc):
     return extracted_text, appendix_index
 
 def normalize_bullets(extract_text):
-    def check_in_first3(bullet, end_bullet_idx = 4):
+    def check_in_firstn(bullet, end_bullet_idx = 5):
         for i in range(end_bullet_idx):
             if  bullet in bullet_levels1[i]:
                 return True, i
@@ -59,7 +59,7 @@ def normalize_bullets(extract_text):
         #     if "Thông tư này quy định việc công bố áp dụng và đánh giá việc đáp ứng Thực hành tốt phân phối thuốc, nguyên liệu làm thuốc." in para:
         #         print("CHECKKKKKKKKKKKKKKKKK")
         #     continue
-        in_first3, index = check_in_first3(bullet.lower())
+        in_first3, index = check_in_firstn(bullet.lower())
         if tracking and index == 2:
             para = para + " > "
 
@@ -304,12 +304,16 @@ def preprocess_chunks(chunks, heading, doc_number):
                     path.append(i)
             path = ">".join(path)
             # Append structured data
-            
+            content_split = re.split('\s*,\s*.\s*:\s*', content)
+            bullet = content_split[0].lower()
+            content = "".join(content_split)
+             # Ectract Điều 4, Mục 1, khoản ...
             processed_chunks.append({
                 "doc_number": doc_number,
                 "doc_id": doc_id,          # Unique ID for each chunk
                 "heading": heading,
                 "middle_path": path,
+                "bullet": bullet,
                 "content": content,     # Content text
             })
         else:

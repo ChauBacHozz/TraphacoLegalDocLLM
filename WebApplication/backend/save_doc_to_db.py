@@ -100,17 +100,18 @@ def save_to_db(new_texts, new_metadata, driver):
         root_node_content = metadata["heading"]
         root_id = metadata["doc_id"]
         content = metadata["content"]
+        bullet = metadata["bullet"]
         id = metadata["id"]
         # Create root node
         tx.run("MERGE (p:Doc_Node {content: $content, d_id: $id})", content = root_node_content, id = root_id)
 
         # Create content node
-        tx.run("MERGE (p:Doc_Node {content: $content, d_id: $id})", content = content, id = id)
+        tx.run("MERGE (p:Doc_Node {bullet: $bullet, content: $content, d_id: $id})", bullet = bullet, content = content, id = id)
 
         # Create middle nodes
         middle_node_names = metadata["middle_path"].split(" > ")
         for middle_node in middle_node_names:
-            tx.run("MERGE (p:Doc_Node {content: $content, d_id: $id})", content = middle_node, id = root_id)
+            tx.run("MERGE (p:Doc_Node {bullet: $bullet, content: $content, d_id: $id})", bullet = bullet, content = middle_node, id = root_id)
         # Connect root node to first middle node
         tx.run("""
             MATCH (a:Doc_Node {content: $p_content, d_id: $root_id}), (b:Doc_Node {content: $m_content, d_id: $id})
