@@ -78,9 +78,9 @@ def save_to_db(new_texts, new_metadata, driver):
         node_count = session.execute_read(count_nodes)
     for i, mtdata in enumerate(new_metadata):
         # bytes_representation = mtdata["path"].encode(encoding="utf-8") 
-        if len(mtdata["content"].strip()) == 0:
-            print("----------CHECK---------")
-            ic(mtdata)
+        # if len(mtdata["content"].strip()) == 0:
+        #     print("----------CHECK---------")
+        #     ic(mtdata)
         bytes_representation = str(mtdata["doc_id"] + mtdata["middle_path"] + str(node_count + i + 1)).encode("utf-8")
         hash_object = hashlib.sha256(bytes_representation)  # Use SHA-256 (or hashlib.md5 for a smaller hash)
         hash_int = int(hash_object.hexdigest(), 16) % (10**10)

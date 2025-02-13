@@ -273,13 +273,16 @@ def preprocess_chunks(chunks, heading, doc_number):
                 chapter = match[0].strip()
                 section = match[1].strip() if match[0] else None
                 article = match[2].strip()
-                content = match[3].strip()
+                # content = match[3].strip()
             else:
                 chapter = match[0].strip()
                 section = None
                 article = None
-                content = match[-1].strip()
+            content = match[-1].strip()
 
+            if len(content.strip()) == 0:
+                print("----------CHECK---------")
+                ic(chunk)
             # ic(match.group(4).strip())
         # break
 
