@@ -166,7 +166,7 @@ if st.button("Upload to database"):
 
         elif "luật" in heading.lower():
             if "sửa đổi" in heading.lower():
-                print("Luật sử đổi bổ sung")
+                print("Luật sửa đổi bổ sung")
             else:
                 print("Luật gốc")
         else:

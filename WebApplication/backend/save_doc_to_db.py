@@ -104,12 +104,20 @@ def save_to_db(new_texts, new_metadata, driver):
         content = metadata["content"]
         id = metadata["id"]
         # Create root node
-        tx.run("MERGE (p:Doc_Node:R_Node {content: $content, d_id: $id})", content = root_node_content, id = root_id)
+        tx.run("MERGE (p:Doc_Node:R_Node {content: $content, d_id: $id})", content = root_node_content,  id = root_id)
 
         # Create content node, content_bullet = bullet from c_node's content
         
-        c_bullet = re.split(r"[.,;)]", content)[0]
-        tx.run("MERGE (p:Doc_Node:C_Node {bullet: $bullet, content: $content, d_id: $id})", bullet = c_bullet, content = content, id = id)
+        c_bullet = content.split(" ")[0].rstrip(".,:)")
+        if len(c_bullet.split(".")) > 1:
+            c_bullet_type = "khoản"
+            c_bullet = c_bullet.split(".")[-1]
+        else:
+            if c_bullet.isalpha():
+                c_bullet_type = "khoản"
+            else:
+                c_bullet_type = "mục"
+        tx.run("MERGE (p:Doc_Node:C_Node {bullet: $bullet, bullet_type: $bullet_type, content: $content, d_id: $id})", bullet = c_bullet, bullet_type = c_bullet_type, content = content, id = id)
 
         # Create middle nodes
         middle_node_names = metadata["middle_path"].split(" > ")
@@ -117,6 +125,9 @@ def save_to_db(new_texts, new_metadata, driver):
             if "chương" in middle_node.lower():
                 m_bullet = middle_node.split(" ")[1]
                 m_bullet_type = "chương"
+            elif "phụ lục" in middle_node.lower():
+                m_bullet = middle_node.split(" ")[2].rstrip(",.:)")
+                m_bullet_type = "phụ lục"
             else:
                 m_bullet = re.split(r"[.,;)]", middle_node)[0]
                 if len(m_bullet.split(" ")) > 1:
