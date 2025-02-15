@@ -18,7 +18,7 @@ def extract_text(doc):
     appendix_index = None
     temp_idx = 0
     for para in doc.paragraphs:
-        if para.text != "\xa0":
+        if para.text != "\xa0" and para.text != "":
             extracted_text.append(para.text)
             temp_idx += 1
         if para.alignment == WD_PARAGRAPH_ALIGNMENT.CENTER and "phụ lục" in para.text.lower() and appendix_index == None:
