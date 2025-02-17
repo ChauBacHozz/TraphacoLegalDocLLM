@@ -135,15 +135,30 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
             modified_heading = metadata["content"].split("[[")[0]
             modified_content = metadata["content"].split("[[")[1].split("]]")[0]
 
+        full_path = (metadata["middle_path"] + metadata["content"]).lower()
+
         # Extract modified purpose
-        modified_purpose = []
-        if "sửa đổi" in modified_heading:
-            modified_purpose.append("sửa đổi")
-        if "bổ sung" in modified_heading:
-            modified_purpose.append("bổ sung")
-        if "bãi bỏ" in modified_heading:
-            modified_purpose.append("bãi bỏ")
+        modified_purpose = dict()
+        if "sửa đổi" in full_path:
+            modified_purpose["sửa đổi"] = full_path.find("sửa đổi")
+        if "bổ sung" in full_path:
+            modified_purpose["bổ sung"] = full_path.find("bổ sung")
+        if "bãi bỏ" in full_path:
+            modified_purpose["bãi bỏ"] = full_path.find("bãi bỏ")
+
         ic(mtdata)
+
+        pattern = r'\d{2,3}/\d{4}/(?:NĐ-CP|TT-CP|QH\d{2})'
+
+        modified_doc_id = re.search(pattern, full_path)
+
+        if modified_doc_id:
+            modified_doc_id = modified_doc_id.group()
+        else:
+            print("Error!!! Cannot find modified document id")
+
+        
+
     def create_graph(tx, metadata):
         root_node_content = metadata["heading"]
         root_id = metadata["doc_id"]
