@@ -356,10 +356,10 @@ def preprocess_chunks(chunks, heading, doc_number):
             if doc_idx:
                 doc_id = doc_number[doc_idx.start():]
                 
-                if "/" in doc_id:
-                    doc_id = doc_id.replace("/", "")
-                if "-" in doc_id:
-                    doc_id = doc_id.replace("-", "")
+                # if "/" in doc_id:
+                #     doc_id = doc_id.replace("/", "")
+                # if "-" in doc_id:
+                #     doc_id = doc_id.replace("-", "")
             else:
                 doc_id = idx + 1
             combined_text = doc_id + " > " + chunk

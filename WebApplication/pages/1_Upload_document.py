@@ -8,7 +8,7 @@ from backend.preprocess_docx import (extract_text, normalize_bullets,
                                      convert_text_list_to_tree, flatten_tree,
                                      preprocess_chunks, normalize_appendix_text_bullets,
                                      normalize_modified_text_bullets)
-from backend.save_doc_to_db import save_to_db, save_tree_to_db
+from backend.save_doc_to_db import save_origin_doc_to_db, save_modified_doc_to_db
 from icecream import ic
 from collections import OrderedDict
 import os
@@ -89,7 +89,7 @@ def save_modified_doc_pre_appendix_type1_to_db(extracted_text, heading, doc_numb
     print("☑️ saving pre-appendix data")
 
     for i in stqdm(range(0, len(metadata_lst), batch_size)):
-        save_to_db(texts[i:i+batch_size],metadata_lst[i:i+batch_size], driver)
+        save_modified_doc_to_db(texts[i:i+batch_size],metadata_lst[i:i+batch_size], driver)
 
 def save_origin_doc_pre_appendix_type1_to_db(extracted_text, heading, doc_number, driver):
     heading_idx = None
@@ -128,7 +128,7 @@ def save_origin_doc_pre_appendix_type1_to_db(extracted_text, heading, doc_number
     print("☑️ saving pre-appendix data")
 
     for i in stqdm(range(0, len(metadata_lst), batch_size)):
-        save_to_db(texts[i:i+batch_size],metadata_lst[i:i+batch_size], driver)
+        save_origin_doc_to_db(texts[i:i+batch_size],metadata_lst[i:i+batch_size], driver)
 
 
 def save_origin_doc_appendix_type1_to_db(document, heading, doc_number, driver):
@@ -172,7 +172,7 @@ def save_origin_doc_appendix_type1_to_db(document, heading, doc_number, driver):
     batch_size = 10    
     print("☑️ saving appendix data")
     for i in stqdm(range(0, len(metadata_lst), batch_size)):
-        save_to_db(texts[i:i+batch_size],metadata_lst[i:i+batch_size], driver)
+        save_origin_doc_to_db(texts[i:i+batch_size],metadata_lst[i:i+batch_size], driver)
 
     
 if st.button("Upload to database"):
@@ -197,13 +197,13 @@ if st.button("Upload to database"):
             if "sửa đổi" in heading.lower() or "bổ sung" in heading.lower() or "bãi bỏ" in heading.lower():
                 # Văn bản sửa đổi
                 save_modified_doc_pre_appendix_type1_to_db(pre_appendix_text, heading, doc_number, driver)
-            # else:
-            #     # Văn bản gốc
-            #     if appendix_index != None:
-            #         print("Có phụ lục")
-            #         save_origin_doc_appendix_type1_to_db(doc_file, heading, doc_number, driver)
-            #     save_origin_doc_pre_appendix_type1_to_db(pre_appendix_text, heading, doc_number, driver)
-            #     st.toast(f"Saved {upload_file.name} database✅")
+            else:
+                # Văn bản gốc
+                if appendix_index != None:
+                    print("Có phụ lục")
+                    save_origin_doc_appendix_type1_to_db(doc_file, heading, doc_number, driver)
+                save_origin_doc_pre_appendix_type1_to_db(pre_appendix_text, heading, doc_number, driver)
+                st.toast(f"Saved {upload_file.name} database✅")
 
         elif "luật" in heading.lower():
             if "sửa đổi" in heading.lower():

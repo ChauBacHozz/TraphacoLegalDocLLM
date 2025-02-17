@@ -10,67 +10,6 @@ from collections import OrderedDict
 import re
 
 def save_origin_doc_to_db(new_texts, new_metadata, driver):
-    # Paths for FAISS index and metadata
-    # FAISS_INDEX_PATH = "db/faiss_index.bin"
-    # FAISSPATH_INDEX_PATH = "db/faiss_path_index.bin"
-    # DATA_PATH = "db/data.pkl"
-    # METADATA_PATH = "db/metadata.pkl"
-
-    # # Load FAISS index and metadata if they exist, otherwise initialize
-    # def load_or_initialize_faiss():
-    #     if os.path.exists(FAISS_INDEX_PATH) and os.path.exists(METADATA_PATH) and os.path.exists(DATA_PATH):
-    #         print("🔄 Loading existing FAISS index, data and metadata...")
-    #         index = faiss.read_index(FAISS_INDEX_PATH)
-    #         path_index = faiss.read_index(FAISSPATH_INDEX_PATH)
-
-    #         with open(METADATA_PATH, "rb") as f:
-    #             metadata = pickle.load(f)
-    #         with open(DATA_PATH, "rb") as f:
-    #             data = pickle.load(f)
-    #     else:
-    #         print("🆕 Creating a new FAISS index...")
-    #         index = None  # Initialize index as None (to be created later)
-    #         path_index = None
-    #         metadata = []  # Empty metadata list
-    #         data = []  # Empty metadata list
-    #     return index, path_index, data, metadata
-
-    # # Save the FAISS index and metadata
-    # def save_faiss_and_metadata(index, path_index, data, metadata):
-    #     faiss.write_index(index, FAISS_INDEX_PATH)
-    #     faiss.write_index(path_index, FAISSPATH_INDEX_PATH)
-
-    #     with open(METADATA_PATH, "wb") as f:
-    #         pickle.dump(metadata, f)
-    #     with open(DATA_PATH, "wb") as f:
-    #         pickle.dump(data, f)
-    #     print("✅ FAISS index, data and metadata saved successfully!")
-
-    # # Load or initialize FAISS
-    # index, path_index, data, metadata = load_or_initialize_faiss()
-
-    # # Convert new documents to embeddings
-    # new_embeddings = model.encode(new_texts, convert_to_numpy=True)
-    # new_path_embeddings = model.encode([mtdata["path"] for mtdata in new_metadata], convert_to_numpy=True)
-
-
-    # # If FAISS index does not exist, create it
-    # if index is None:
-    #     embedding_size = new_embeddings.shape[1]  # Get the embedding dimension
-    #     index = faiss.IndexFlatL2(embedding_size)  # Create FAISS index
-    #     path_embedding_size = new_path_embeddings.shape[1]  # Get the embedding dimension
-    #     path_index = faiss.IndexFlatL2(path_embedding_size)  # Create FAISS index
-    #     print(f"🛠️ Created FAISS index with dimension {embedding_size}")
-
-    # # Append new embeddings to FAISS index
-    # index.add(new_embeddings)
-
-    # path_index.add(new_path_embeddings)
-
-    # # Append new data
-    # data.extend(new_texts)
-
-
     # # Add id to current new_metadata
     def count_nodes(tx):
         query = "MATCH (n) RETURN count(n) AS node_count"
@@ -104,7 +43,7 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
         content = metadata["content"]
         id = metadata["id"]
         # Create root node
-        tx.run("MERGE (p:Doc_Node:R_Node {content: $content, d_id: $id})", content = root_node_content,  id = root_id)
+        tx.run("MERGE (p:Doc_Node:R_Node:Origin_Node {content: $content, d_id: $id})", content = root_node_content,  id = root_id)
 
         # Create content node, content_bullet = bullet from c_node's content
         
@@ -117,7 +56,7 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
                 c_bullet_type = "khoản"
             else:
                 c_bullet_type = "mục"
-        tx.run("MERGE (p:Doc_Node:C_Node {bullet: $bullet, bullet_type: $bullet_type, content: $content, d_id: $id})", bullet = c_bullet, bullet_type = c_bullet_type, content = content, id = id)
+        tx.run("MERGE (p:Doc_Node:C_Node:Origin_Node {bullet: $bullet, bullet_type: $bullet_type, content: $content, d_id: $id})", bullet = c_bullet, bullet_type = c_bullet_type, content = content, id = id)
 
         # Create middle nodes
         middle_node_names = metadata["middle_path"].split(" > ")
@@ -138,21 +77,21 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
                         m_bullet_type = "khoản"
                     else:
                         m_bullet_type = "mục"
-            tx.run("MERGE (p:Doc_Node:M_Node {bullet: $bullet, bullet_type: $bullet_type, content: $content, d_id: $id})", bullet = m_bullet, bullet_type = m_bullet_type, content = middle_node, id = root_id)
+            tx.run("MERGE (p:Doc_Node:M_Node:Origin_Node {bullet: $bullet, bullet_type: $bullet_type, content: $content, d_id: $id})", bullet = m_bullet, bullet_type = m_bullet_type, content = middle_node, id = root_id)
         # Connect root node to first middle node
         tx.run("""
-            MATCH (a:Doc_Node:R_Node {content: $p_content, d_id: $root_id}), (b:Doc_Node:M_Node {content: $m_content, d_id: $id})
+            MATCH (a:Doc_Node:R_Node:Origin_Node {content: $p_content, d_id: $root_id}), (b:Doc_Node:M_Node:Origin_Node {content: $m_content, d_id: $id})
             MERGE (a)-[:PARENT]->(b)
         """, p_content=root_node_content, m_content=middle_node_names[0], root_id = root_id, id = root_id)
         # Connect last middle node to content node
         tx.run("""
-            MATCH (a:Doc_Node:M_Node {content: $m_content, d_id: $root_id}), (b:Doc_Node:C_Node {content: $c_content, d_id: $id})
+            MATCH (a:Doc_Node:M_Node:Origin_Node {content: $m_content, d_id: $root_id}), (b:Doc_Node:C_Node:Origin_Node {content: $c_content, d_id: $id})
             MERGE (a)-[:CONTAIN]->(b)
         """, m_content=middle_node_names[-1], c_content=content, root_id = root_id, id = id)
         # Connect middle nodes
         for i in range(len(middle_node_names) - 1):
             tx.run("""
-                MATCH (a:Doc_Node:M_Node {content: $node1, d_id: $id}), (b:Doc_Node:M_Node {content: $node2, d_id: $id})
+                MATCH (a:Doc_Node:M_Node:Origin_Node {content: $node1, d_id: $id}), (b:Doc_Node:M_Node:Origin_Node {content: $node2, d_id: $id})
                 MERGE (a)-[:CONTAIN]->(b)
             """, node1=middle_node_names[i], node2=middle_node_names[i + 1], id = root_id)
 
@@ -170,8 +109,8 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
         # paths = mtdata["path"].split(">")
         with driver.session() as session:
             session.execute_write(create_graph, mtdata)
-            
-def save_origin_doc_to_db(new_texts, new_metadata, driver):
+
+def save_modified_doc_to_db(new_texts, new_metadata, driver):
     # # Add id to current new_metadata
     def count_nodes(tx):
         query = "MATCH (n) RETURN count(n) AS node_count"
@@ -188,14 +127,30 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
         hash_object = hashlib.sha256(bytes_representation)  # Use SHA-256 (or hashlib.md5 for a smaller hash)
         hash_int = int(hash_object.hexdigest(), 16) % (10**10)
         mtdata["id"] = hash_int
+    def sub_process_metadata(metadata):
+        # Get modified purpose
+        modified_content = None
+        modified_heading = metadata["content"]
+        if "[[" in metadata["content"]:
+            modified_heading = metadata["content"].split("[[")[0]
+            modified_content = metadata["content"].split("[[")[1].split("]]")[0]
 
+        # Extract modified purpose
+        modified_purpose = []
+        if "sửa đổi" in modified_heading:
+            modified_purpose.append("sửa đổi")
+        if "bổ sung" in modified_heading:
+            modified_purpose.append("bổ sung")
+        if "bãi bỏ" in modified_heading:
+            modified_purpose.append("bãi bỏ")
+        ic(mtdata)
     def create_graph(tx, metadata):
         root_node_content = metadata["heading"]
         root_id = metadata["doc_id"]
         content = metadata["content"]
         id = metadata["id"]
         # Create root node
-        tx.run("MERGE (p:Doc_Node:R_Node {content: $content, d_id: $id})", content = root_node_content,  id = root_id)
+        tx.run("MERGE (p:Doc_Node:R_Node:Modified_Node {content: $content, d_id: $id})", content = root_node_content,  id = root_id)
 
         # Create content node, content_bullet = bullet from c_node's content
         
@@ -208,7 +163,7 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
                 c_bullet_type = "khoản"
             else:
                 c_bullet_type = "mục"
-        tx.run("MERGE (p:Doc_Node:C_Node {bullet: $bullet, bullet_type: $bullet_type, content: $content, d_id: $id})", bullet = c_bullet, bullet_type = c_bullet_type, content = content, id = id)
+        tx.run("MERGE (p:Doc_Node:C_Node:Modified_Node {bullet: $bullet, bullet_type: $bullet_type, content: $content, d_id: $id})", bullet = c_bullet, bullet_type = c_bullet_type, content = content, id = id)
 
         # Create middle nodes
         middle_node_names = metadata["middle_path"].split(" > ")
@@ -229,27 +184,28 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
                         m_bullet_type = "khoản"
                     else:
                         m_bullet_type = "mục"
-            tx.run("MERGE (p:Doc_Node:M_Node {bullet: $bullet, bullet_type: $bullet_type, content: $content, d_id: $id})", bullet = m_bullet, bullet_type = m_bullet_type, content = middle_node, id = root_id)
+            tx.run("MERGE (p:Doc_Node:M_Node:Modified_Node {bullet: $bullet, bullet_type: $bullet_type, content: $content, d_id: $id})", bullet = m_bullet, bullet_type = m_bullet_type, content = middle_node, id = root_id)
         # Connect root node to first middle node
         tx.run("""
-            MATCH (a:Doc_Node:R_Node {content: $p_content, d_id: $root_id}), (b:Doc_Node:M_Node {content: $m_content, d_id: $id})
+            MATCH (a:Doc_Node:R_Node:Modified_Node {content: $p_content, d_id: $root_id}), (b:Doc_Node:M_Node:Modified_Node {content: $m_content, d_id: $id})
             MERGE (a)-[:PARENT]->(b)
         """, p_content=root_node_content, m_content=middle_node_names[0], root_id = root_id, id = root_id)
         # Connect last middle node to content node
         tx.run("""
-            MATCH (a:Doc_Node:M_Node {content: $m_content, d_id: $root_id}), (b:Doc_Node:C_Node {content: $c_content, d_id: $id})
+            MATCH (a:Doc_Node:M_Node:Modified_Node {content: $m_content, d_id: $root_id}), (b:Doc_Node:C_Node:Modified_Node {content: $c_content, d_id: $id})
             MERGE (a)-[:CONTAIN]->(b)
         """, m_content=middle_node_names[-1], c_content=content, root_id = root_id, id = id)
         # Connect middle nodes
         for i in range(len(middle_node_names) - 1):
             tx.run("""
-                MATCH (a:Doc_Node:M_Node {content: $node1, d_id: $id}), (b:Doc_Node:M_Node {content: $node2, d_id: $id})
+                MATCH (a:Doc_Node:M_Node:Modified_Node {content: $node1, d_id: $id}), (b:Doc_Node:M_Node:Modified_Node {content: $node2, d_id: $id})
                 MERGE (a)-[:CONTAIN]->(b)
             """, node1=middle_node_names[i], node2=middle_node_names[i + 1], id = root_id)
     for mtdata in new_metadata:
         # paths = mtdata["path"].split(">")
-        with driver.session() as session:
-            session.execute_write(create_graph, mtdata)
+        sub_process_metadata(mtdata)
+        # with driver.session() as session:
+        #     session.execute_write(create_graph, mtdata)
 
 # def save_tree_to_db(tree, driver):
 #     def insert_node(tx, parent_name, child_name, child_content, order):
