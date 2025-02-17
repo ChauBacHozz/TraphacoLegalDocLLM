@@ -89,6 +89,71 @@ def normalize_bullets(extract_text):
         #     continue
     return full_text
 
+def normalize_modified_text_bullets(extract_text):
+    def check_in_firstn(bullet, end_bullet_idx = 5):
+        for i in range(end_bullet_idx):
+            if  bullet in bullet_levels1[i]:
+                return True, i
+        return False, None
+    
+    text = extract_text
+    tree = OrderedDict()
+
+    full_text = []
+    c_check = False
+    tracking = False
+    last_tracking = False
+    open_bracket = False
+    quote = ""
+    for i, para in enumerate(text):
+        # Find quote in text lines by bracket, add into a variable
+        if ('”' in para and '“' in para):
+            open_bracket = False
+            quote = "[[" + para.replace('”', "").replace('“', "") + "]]"
+            full_text[-1] = full_text[-1] + " " + quote
+            quote = "[["
+            continue     
+        if ('”' in para) and open_bracket:
+            open_bracket = False
+            quote +=  "\n" + para.replace("”", "")
+            quote += "]]"
+            full_text[-1] = full_text[-1] + " " + quote
+            quote = "[["
+            continue
+        if ('“' in para) and not open_bracket:
+            open_bracket = True
+            quote = "[["
+            quote += " " + para.replace("“", "")
+            continue
+        if open_bracket:
+            quote += "\n" + para
+            continue
+        if c_check == True:
+            c_check = False
+            continue
+        if para.split(" ")[0].lower() == "chương":
+            para = para + " " + text[i + 1]
+            c_check = True
+        else:
+            c_check = False
+        first_token = para.split(" ")[0]
+        bullet = "###"
+        if len(first_token.strip()) > 0:
+            bullet = re.split(r"[.,;)]",first_token)[0]
+        in_first3, index = check_in_firstn(bullet.lower())
+        if tracking and index == 2:
+            para = para + " > "
+
+        if in_first3:
+            tracking = True
+            last_tracking = True
+            full_text.append(para)
+        else:
+            tracking = False
+            last_tracking = False
+            full_text[-1] = full_text[-1] + ". " + para
+    return full_text
+
 def normalize_appendix_text_bullets(extract_text, appendix_heading_ids):
     def detect_TOC(texts):
         toc = []

@@ -6,7 +6,8 @@ from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from sentence_transformers import SentenceTransformer
 from backend.preprocess_docx import (extract_text, normalize_bullets, 
                                      convert_text_list_to_tree, flatten_tree,
-                                     preprocess_chunks, normalize_appendix_text_bullets)
+                                     preprocess_chunks, normalize_appendix_text_bullets,
+                                     normalize_modified_text_bullets)
 from backend.save_doc_to_db import save_to_db, save_tree_to_db
 from icecream import ic
 from collections import OrderedDict
@@ -65,31 +66,34 @@ def save_modified_doc_pre_appendix_type1_to_db(extracted_text, heading, doc_numb
         print("ERROR")
         return
 
-    full_text = normalize_bullets(extracted_text)
-    # Convert text list to tree base to manage content 
-    tree = convert_text_list_to_tree(full_text)
+    full_text = normalize_modified_text_bullets(extracted_text)
+
+
+    ic(full_text[:30])
+    # # Convert text list to tree base to manage content 
+    # tree = convert_text_list_to_tree(full_text)
     
-    # save_tree_to_db(tree, driver)
-    # Flatten tree into list of strings
-    flattened_tree = flatten_tree(tree)
-    # ic(flattened_tree)
-    # Split data into chunks
-    chunks = [text[0] for text in flattened_tree]
-    # chunks = [f"{path}: {text}" for path, text in flattened_tree]
-    # Preprocess chunks
-    preprocessed_chunks = preprocess_chunks(chunks, heading, doc_number)
-    # Extract 'text' atribute from preprocessed_chunks
-    texts = [chunk['content'] for chunk in preprocessed_chunks]
-    metadata_lst = []
-    for chunk in preprocessed_chunks:
-        # chunk.pop("content")
-        metadata_lst.append(chunk)
+    # # save_tree_to_db(tree, driver)
+    # # Flatten tree into list of strings
+    # flattened_tree = flatten_tree(tree)
+    # # ic(flattened_tree)
+    # # Split data into chunks
+    # chunks = [text[0] for text in flattened_tree]
+    # # chunks = [f"{path}: {text}" for path, text in flattened_tree]
+    # # Preprocess chunks
+    # preprocessed_chunks = preprocess_chunks(chunks, heading, doc_number)
+    # # Extract 'text' atribute from preprocessed_chunks
+    # texts = [chunk['content'] for chunk in preprocessed_chunks]
+    # metadata_lst = []
+    # for chunk in preprocessed_chunks:
+    #     # chunk.pop("content")
+    #     metadata_lst.append(chunk)
 
-    batch_size = 10    
-    print("☑️ saving pre-appendix data")
+    # batch_size = 10    
+    # print("☑️ saving pre-appendix data")
 
-    for i in stqdm(range(0, len(metadata_lst), batch_size)):
-        save_to_db(texts[i:i+batch_size],metadata_lst[i:i+batch_size], driver)
+    # for i in stqdm(range(0, len(metadata_lst), batch_size)):
+    #     save_to_db(texts[i:i+batch_size],metadata_lst[i:i+batch_size], driver)
 
 def save_origin_doc_pre_appendix_type1_to_db(extracted_text, heading, doc_number, driver):
     heading_idx = None
