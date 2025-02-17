@@ -53,9 +53,9 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
             c_bullet = c_bullet.split(".")[-1]
         else:
             if c_bullet.isalpha():
-                c_bullet_type = "khoản"
+                c_bullet_type = "điểm"
             else:
-                c_bullet_type = "mục"
+                c_bullet_type = "khoản"
         tx.run("MERGE (p:Doc_Node:C_Node:Origin_Node {bullet: $bullet, bullet_type: $bullet_type, content: $content, d_id: $id})", bullet = c_bullet, bullet_type = c_bullet_type, content = content, id = id)
 
         # Create middle nodes
@@ -74,9 +74,9 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
                     m_bullet = m_bullet.split(" ")[-1]
                 else:
                     if m_bullet.isalpha():
-                        m_bullet_type = "khoản"
+                        m_bullet_type = "điểm"
                     else:
-                        m_bullet_type = "mục"
+                        m_bullet_type = "khoản"
             tx.run("MERGE (p:Doc_Node:M_Node:Origin_Node {bullet: $bullet, bullet_type: $bullet_type, content: $content, d_id: $id})", bullet = m_bullet, bullet_type = m_bullet_type, content = middle_node, id = root_id)
         # Connect root node to first middle node
         tx.run("""
@@ -135,27 +135,30 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
             modified_heading = metadata["content"].split("[[")[0]
             modified_content = metadata["content"].split("[[")[1].split("]]")[0]
 
-        full_path = (metadata["middle_path"] + metadata["content"]).lower()
+        full_path = metadata["middle_path"] + metadata["content"]
 
         # Extract modified purpose
         modified_purpose = dict()
-        if "sửa đổi" in full_path:
-            modified_purpose["sửa đổi"] = full_path.find("sửa đổi")
-        if "bổ sung" in full_path:
-            modified_purpose["bổ sung"] = full_path.find("bổ sung")
-        if "bãi bỏ" in full_path:
-            modified_purpose["bãi bỏ"] = full_path.find("bãi bỏ")
+        metadata["modified_purpose"] = None
+        if "sửa đổi" in full_path.lower():
+            modified_purpose["sửa đổi"] = full_path.lower().rfind("sửa đổi")
+        if "bổ sung" in full_path.lower():
+            modified_purpose["bổ sung"] = full_path.lower().rfind("bổ sung")
+        if "bãi bỏ" in full_path.lower():
+            modified_purpose["bãi bỏ"] = full_path.lower().rfind("bãi bỏ")
 
-        ic(mtdata)
-
-        pattern = r'\d{2,3}/\d{4}/(?:NĐ-CP|TT-CP|QH\d{2})'
+        if modified_purpose:
+            metadata["modified_purpose"] = max(modified_purpose, key=modified_purpose.get)
+            if modified_content:
+                metadata["modified_content"] = metadata["content"]
+        pattern = r'\d{2,3}/\d{4}/(?:NĐ-CP|TT-CP|TT-BYT|QH\d{2})'
 
         modified_doc_id = re.search(pattern, full_path)
 
         if modified_doc_id:
             modified_doc_id = modified_doc_id.group()
         else:
-            print("Error!!! Cannot find modified document id")
+            print("Error!!! Cannot find modified document id", full_path)
 
         
 
@@ -219,6 +222,7 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
     for mtdata in new_metadata:
         # paths = mtdata["path"].split(">")
         sub_process_metadata(mtdata)
+    ic(new_metadata[:10])
         # with driver.session() as session:
         #     session.execute_write(create_graph, mtdata)
 
