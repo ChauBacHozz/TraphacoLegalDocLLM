@@ -175,6 +175,8 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
                 match = re.search(pattern, modified_heading, re.IGNORECASE)
                 if match:
                     print("Điều", int(match.group(1)), "||", modified_heading)
+            else:
+                print("Cannot find modified bullet")
 
         else:
             print("Error!!! Cannot find modified document id", full_path)
