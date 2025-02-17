@@ -157,6 +157,25 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
 
         if modified_doc_id:
             modified_doc_id = modified_doc_id.group()
+            metadata["modified_doc_id"] = modified_doc_id
+
+            # Dectect "điều" modified
+            if "điều" in modified_heading.lower():
+                pattern = r"điều\s+(\d+)"
+                match = re.search(pattern, modified_heading, re.IGNORECASE)
+                if match:
+                    print("Điều", int(match.group(1)), "||", modified_heading)
+            elif "khoản" in modified_heading.lower():
+                pattern = r"khoản\s+(\d+)"
+                match = re.search(pattern, modified_heading, re.IGNORECASE)
+                if match:
+                    print("Điều", int(match.group(1)), "||", modified_heading)
+            elif "điểm" in modified_heading.lower():
+                pattern = r"điểm\s+(\d+)"
+                match = re.search(pattern, modified_heading, re.IGNORECASE)
+                if match:
+                    print("Điều", int(match.group(1)), "||", modified_heading)
+
         else:
             print("Error!!! Cannot find modified document id", full_path)
 
@@ -222,7 +241,7 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
     for mtdata in new_metadata:
         # paths = mtdata["path"].split(">")
         sub_process_metadata(mtdata)
-    ic(new_metadata[:10])
+    # ic(new_metadata[:10])
         # with driver.session() as session:
         #     session.execute_write(create_graph, mtdata)
 
