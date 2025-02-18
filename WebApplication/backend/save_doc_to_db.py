@@ -158,23 +158,23 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
         if modified_doc_id:
             modified_doc_id = modified_doc_id.group()
             metadata["modified_doc_id"] = modified_doc_id
-
+            sub_tree = dict()
             # Dectect "điều" modified
             if "điều" in modified_heading.lower():
                 pattern = r"điều\s+(\d+)"
                 match = re.search(pattern, modified_heading, re.IGNORECASE)
                 if match:
-                    print("Điều", int(match.group(1)), "||", modified_heading)
+                    sub_tree["điều"] = int(match.group(1))
             elif "khoản" in modified_heading.lower():
                 pattern = r"khoản\s+(\d+)"
                 match = re.search(pattern, modified_heading, re.IGNORECASE)
                 if match:
-                    print("Điều", int(match.group(1)), "||", modified_heading)
+                    sub_tree["khoản"] = int(match.group(1))
             elif "điểm" in modified_heading.lower():
                 pattern = r"điểm\s+(\d+)"
                 match = re.search(pattern, modified_heading, re.IGNORECASE)
                 if match:
-                    print("Điều", int(match.group(1)), "||", modified_heading)
+                    sub_tree["điểm"] = int(match.group(1))
             else:
                 print("Cannot find modified bullet")
 
