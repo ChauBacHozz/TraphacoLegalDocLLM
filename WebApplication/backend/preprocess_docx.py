@@ -71,6 +71,8 @@ def normalize_bullets(extract_text):
         else:
             tracking = False
             last_tracking = False
+            if len(full_text) == 0:
+                full_text.append(para)
             full_text[-1] = full_text[-1] + ". " + para
         # if (not check_in_first3(bullet.lower())) and (not last_tracking):
         #     # print("Check1")

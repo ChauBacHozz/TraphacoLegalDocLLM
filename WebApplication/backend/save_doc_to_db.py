@@ -8,7 +8,7 @@ import hashlib
 from neo4j import GraphDatabase
 from collections import OrderedDict
 import re
-from preprocess_docx import (normalize_bullets,
+from backend.preprocess_docx import (normalize_bullets,
                              convert_text_list_to_tree,
                              flatten_tree,
                              preprocess_chunks)
@@ -58,8 +58,11 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
         else:
             if c_bullet.isalpha():
                 c_bullet_type = "điểm"
-            else:
+            elif c_bullet.isdigit():
                 c_bullet_type = "khoản"
+            else:
+                c_bullet_type = ""
+
         tx.run("MERGE (p:Doc_Node:C_Node:Origin_Node {bullet: $bullet, bullet_type: $bullet_type, content: $content, d_id: $id})", bullet = c_bullet, bullet_type = c_bullet_type, content = content, id = id)
 
         # Create middle nodes
@@ -205,6 +208,7 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
                 tmp_path[f"{match}"] = OrderedDict()
         flattened_tree = flatten_tree(path)
         return flattened_tree
+    
     def sub_process_metadata(metadata):
         # Get modified purpose
         modified_content = None
@@ -248,20 +252,45 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
                     extracted_text[1] = extracted_text[0].strip() + " " + extracted_text[1].strip()
                     extracted_text = extracted_text[1:]
 
-            
-            metadata["modified_content"] = extracted_text
+            # SUBPROCESS FOR CONTENT -> CONVERT TO LIST OF METADATA
+            full_text = normalize_bullets(extracted_text)
+            # Convert text list to tree base to manage content 
+            tree = convert_text_list_to_tree(full_text)
+            # Flatten tree into list of strings
+            flattened_tree = flatten_tree(tree)
+            # Split data into chunks
+            chunks = [text[0] for text in flattened_tree]
+            # Preprocess chunks
+            preprocessed_chunks = preprocess_chunks(chunks, "", modified_doc_id)
+            # Extract 'text' atribute from preprocessed_chunks
+            texts = [chunk['content'] for chunk in preprocessed_chunks]
+            metadata_lst = []
+            for chunk in preprocessed_chunks:
+                # chunk.pop("content")
+                metadata_lst.append(chunk)
+
+            metadata["modified_content"] = metadata_lst
+
+    def create_modified_sub_graph(tx, modified_content):
+        pass
+
 
 
     def create_graph(tx, metadata):
         root_node_content = metadata["heading"]
         root_id = metadata["doc_id"]
         content = metadata["content"]
+
+        modified_purpose = metadata["modified_purpose"]
+        modified_doc_id = metadata["modified_doc_id"]
+        modified_paths = metadata["modified_paths"]
+        modified_content = metadata["modified_content"]
+
         id = metadata["id"]
         # Create root node
         tx.run("MERGE (p:Doc_Node:R_Node:Modified_Node {content: $content, d_id: $id})", content = root_node_content,  id = root_id)
 
-        # Create content node, content_bullet = bullet from c_node's content
-        
+        # Create content node, content_bullet = bullet from c_node's content            
         c_bullet = content.split(" ")[0].rstrip(".,:)")
         if len(c_bullet.split(".")) > 1:
             c_bullet_type = "khoản"
@@ -272,6 +301,9 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
             else:
                 c_bullet_type = "mục"
         tx.run("MERGE (p:Doc_Node:C_Node:Modified_Node {bullet: $bullet, bullet_type: $bullet_type, content: $content, d_id: $id})", bullet = c_bullet, bullet_type = c_bullet_type, content = content, id = id)
+
+        if modified_doc_id:
+            
 
         # Create middle nodes
         middle_node_names = metadata["middle_path"].split(" > ")
@@ -315,41 +347,5 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
     for mtdata in new_metadata:
         # paths = mtdata["path"].split(">")
         sub_process_metadata(mtdata)
-    ic(new_metadata[0])
-    # ic(new_metadata[:10])
-        # with driver.session() as session:
-        #     session.execute_write(create_graph, mtdata)
-
-# def save_tree_to_db(tree, driver):
-#     def insert_node(tx, parent_name, child_name, child_content, order):
-#         """
-#         Insert a node and link it to its parent, preserving order.
-#         """
-#         query = """
-#         MERGE (parent:Node {name: $parent_name})
-#         MERGE (child:Node {name: $child_name})
-#         ON CREATE SET child.content = $child_content, child.order = $order
-#         MERGE (parent)-[:HAS_CHILD {order: $order}]->(child)
-#         """
-#         tx.run(query, parent_name=parent_name, child_name=child_name, child_content=child_content, order=order)
-
-#     def process_dict(tx, parent, data, level=0):
-#         """
-#         Recursively process the nested ordered dictionary and insert into Neo4j.
-#         Maintains order using an "order" property.
-#         """
-#         for index, (key, value) in enumerate(data.items()):
-#             if isinstance(value, OrderedDict):  # If value is a dict, create a node and recurse
-#                 insert_node(tx, parent, key, None, index)  # No direct content, just a node
-#                 process_dict(tx, key, value, level + 1)  # Recurse deeper
-#             else:  # If value is a string, it's the final content
-#                 insert_node(tx, parent, key, value, index)
-
-#     # Insert data into Neo4j
-#     with driver.session() as session:
-#         session.execute_write(process_dict, "Root", tree)  # "Root" as the top-level node
-
-    # print("Data inserted successfully!")
-
-    # Close connection
-    # driver.close()
+        with driver.session() as session:
+            session.execute_write(create_graph, mtdata)
