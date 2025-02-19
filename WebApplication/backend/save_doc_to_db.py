@@ -326,6 +326,13 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
                     )
                     tx.run(connect_query, node1=path_lst[i], node2=path_lst[i + 1], id = modified_doc_id, path1 = p, path2 = p)                                
 
+                # Connect last middle node to modified node
+                tx.run("""
+                    MATCH (a:Doc_Node:C_Node:Origin_Node {d_id: $root_id, path: $path, content: $content}), (b:Doc_Node:C_Node:Modified_Node {d_id: $id})
+                    MERGE (b)-[:MODIFIED]->(a)
+                """, root_id = modified_doc_id, id = c_node_id, path = p, content = path_lst[-1])
+
+
         else:
             tx.run("""
                 MATCH (a:Doc_Node:R_Node:Origin_Node {d_id: $root_id}), (b:Doc_Node:C_Node:Modified_Node {d_id: $id})
