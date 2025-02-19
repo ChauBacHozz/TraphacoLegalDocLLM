@@ -127,6 +127,74 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
         hash_object = hashlib.sha256(bytes_representation)  # Use SHA-256 (or hashlib.md5 for a smaller hash)
         hash_int = int(hash_object.hexdigest(), 16) % (10**10)
         mtdata["id"] = hash_int
+    def create_tree_paths(text):
+        def check_same_type(a, b):
+            if a.isdigit() and b.isdigit():
+                return True
+            elif a.isalpha() and b.isalpha():
+                return True
+            else:
+                return False
+        def split_and_concat(text):
+            res = re.split("và|,", text)
+            new_res = [r.strip() for r in res if r.strip()]
+            first_bul = new_res[0].split(" ")[-1]
+            fix_bul = "".join(new_res[0].split(" ")[:-1])
+            final_res = []
+            final_res.append(new_res[0])
+            for r in new_res[1:]:
+                if check_same_type(r, first_bul):
+                    final_res.append(fix_bul + " " + r)
+            return final_res
+        def flatten_tree(tree, parent_path="", separator=" > "):
+            flat_list = []
+            for key, value in tree.items():
+                current_path = f"{parent_path}{separator}{key}" if parent_path else key
+                # print(f"Processing: {current_path}")  # Debugging step
+                if value:  # Check if the value is not blank OrderedDict
+                    flat_list.extend(flatten_tree(value, current_path, separator))
+                else:
+                    # If value is a blank ordered dict, convert value to blank string
+                    flat_list.append(current_path)
+            return flat_list
+        pattern = r"\b(?:điểm|khoản|điều|mục|chương)(?:(?!\b(?:điểm|khoản|điều|mục|chương)\b).)*"
+        # Building path list
+        path = OrderedDict()
+        lst = []
+        matches = list(re.finditer(pattern, text, re.IGNORECASE))
+        matches_lst = [match.group().strip().rstrip(",.;") for match in reversed(matches)]
+        decompose_matches = []
+        for match in matches_lst:
+            if "," in match or "và" in match:
+                splitted_matcheds = split_and_concat(match)
+                for i in splitted_matcheds:
+                    decompose_matches.append(i)
+            else:
+                decompose_matches.append(match)
+        d_matches = []
+        pattern2 = r"\b(?:điểm|khoản|điều|mục|chương) \w+"
+        for i in decompose_matches:
+            match = re.search(pattern2, i, re.IGNORECASE)
+            if match:
+                tmp = match.group().lower()
+            else:
+                tmp = ""
+            d_matches.append(tmp)
+        for match in d_matches:
+            if match.split(" ")[0].lower() not in lst:
+                tmp_path = path
+                for i in range(len(lst)):
+                    tmp_path = tmp_path[next(reversed(tmp_path))]
+                tmp_path[f"{match}"] = OrderedDict()
+                lst.append(match.split(" ")[0].lower())
+            else:
+                index = lst.index(match.split(" ")[0].lower())
+                tmp_path = path
+                for i in range(index):
+                    tmp_path = tmp_path[next(reversed(tmp_path))]
+                tmp_path[f"{match}"] = OrderedDict()
+        flattened_tree = flatten_tree(path)
+        return flattened_tree
     def sub_process_metadata(metadata):
         # Get modified purpose
         modified_content = None
@@ -158,26 +226,9 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
         if modified_doc_id:
             modified_doc_id = modified_doc_id.group()
             metadata["modified_doc_id"] = modified_doc_id
-            sub_tree = dict()
-            # Dectect "điều" modified
-            if "điều" in modified_heading.lower():
-                pattern = r"điều\s+(\d+)"
-                match = re.search(pattern, modified_heading, re.IGNORECASE)
-                if match:
-                    sub_tree["điều"] = int(match.group(1))
-            elif "khoản" in modified_heading.lower():
-                pattern = r"khoản\s+(\d+)"
-                match = re.search(pattern, modified_heading, re.IGNORECASE)
-                if match:
-                    sub_tree["khoản"] = int(match.group(1))
-            elif "điểm" in modified_heading.lower():
-                pattern = r"điểm\s+(\d+)"
-                match = re.search(pattern, modified_heading, re.IGNORECASE)
-                if match:
-                    sub_tree["điểm"] = int(match.group(1))
-            else:
-                print("Cannot find modified bullet")
-
+            if "điều khoản" not in metadata["middle_path"].lower():
+                sub_tree = create_tree_paths(modified_heading)
+                metadata["modified_paths"] = sub_tree
         else:
             print("Error!!! Cannot find modified document id", full_path)
 
@@ -243,6 +294,7 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
     for mtdata in new_metadata:
         # paths = mtdata["path"].split(">")
         sub_process_metadata(mtdata)
+    ic(new_metadata[:30])
     # ic(new_metadata[:10])
         # with driver.session() as session:
         #     session.execute_write(create_graph, mtdata)
