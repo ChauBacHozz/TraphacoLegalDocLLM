@@ -241,7 +241,13 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
             if "điều khoản" not in metadata["middle_path"].lower():
                 sub_tree = create_tree_paths(modified_heading)
                 metadata["modified_paths"] = sub_tree
+            else:
+                metadata["modified_paths"] = []
         else:
+            # Trường hợp không tham chiếu đến bất kỳ văn bản nào
+            metadata["modified_doc_id"] = None
+            metadata["modified_paths"] = []
+
             print("Error!!! Cannot find modified document id", full_path)
 
         if modified_content:
@@ -270,6 +276,20 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
                 metadata_lst.append(chunk)
 
             metadata["modified_content"] = metadata_lst
+        else:
+            metadata["modified_content"] = None
+
+    def create_virtual_origin_nodes(tx, c_node_id, modified_path, modified_doc_id):
+        # Create root node
+        tx.run("MERGE (p:Doc_Node:R_Node:Origin_Node {d_id: $root_id})",root_id = modified_doc_id)
+        # Link root node to current modified content node
+        if len(modified_path) > 0:
+            for c_node
+        else:
+            tx.run("""
+                MATCH (a:Doc_Node:R_Node:Origin_Node {d_id: $root_id}), (b:Doc_Node:C_Node:Modified_Node {d_id: $id})
+                MERGE (b)-[:MODIFIED]->(a)
+            """, root_id = modified_doc_id, id = c_node_id)
 
     def create_modified_sub_graph(tx, modified_content):
         pass
@@ -303,7 +323,7 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
         tx.run("MERGE (p:Doc_Node:C_Node:Modified_Node {bullet: $bullet, bullet_type: $bullet_type, content: $content, d_id: $id})", bullet = c_bullet, bullet_type = c_bullet_type, content = content, id = id)
 
         if modified_doc_id:
-            
+            create_virtual_origin_nodes(tx, c_node_id=id, modified_path=modified_paths, modified_doc_id=modified_doc_id)
 
         # Create middle nodes
         middle_node_names = metadata["middle_path"].split(" > ")
