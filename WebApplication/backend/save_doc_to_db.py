@@ -8,6 +8,10 @@ import hashlib
 from neo4j import GraphDatabase
 from collections import OrderedDict
 import re
+from preprocess_docx import (normalize_bullets,
+                             convert_text_list_to_tree,
+                             flatten_tree,
+                             preprocess_chunks)
 
 def save_origin_doc_to_db(new_texts, new_metadata, driver):
     # # Add id to current new_metadata
@@ -164,7 +168,13 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
         matches = list(re.finditer(pattern, text, re.IGNORECASE))
         matches_lst = [match.group().strip().rstrip(",.;") for match in reversed(matches)]
         decompose_matches = []
+        # Check if keyword in each elements of matches_lst is valid
+        matches_lst_fixed = []
         for match in matches_lst:
+            tmp = re.split("điểm|khoản|điều|mục|chương", match, flags=re.IGNORECASE)
+            if len(tmp[1].strip().split(" ")[0]) < 4:
+                matches_lst_fixed.append(match)
+        for match in matches_lst_fixed:
             if "," in match or "và" in match:
                 splitted_matcheds = split_and_concat(match)
                 for i in splitted_matcheds:
@@ -233,9 +243,12 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
         if modified_content:
             # Subprocess on modified_content (inside [[]])
             extracted_text = modified_content.split("\n")
-            if "chương" in extracted_text[0].lower() and extracted_text[1].isupper():
-                extracted_text[1] = extracted_text[0] + extracted_text[1]
-                extracted_text = extracted_text[1:]
+            if len(extracted_text) > 1:
+                if "chương" in extracted_text[0].lower() and extracted_text[1].isupper():
+                    extracted_text[1] = extracted_text[0].strip() + " " + extracted_text[1].strip()
+                    extracted_text = extracted_text[1:]
+
+            
             metadata["modified_content"] = extracted_text
 
 
