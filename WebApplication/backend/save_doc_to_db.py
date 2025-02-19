@@ -282,19 +282,50 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
     def create_virtual_origin_nodes(tx, c_node_id, modified_paths, modified_doc_id):
         # Create root node
         tx.run("MERGE (p:Doc_Node:R_Node:Origin_Node {d_id: $root_id})",root_id = modified_doc_id)
+        node_order_type = None
         # Link root node to current modified content node
         if len(modified_paths) > 0:
             # Create middle nodes if modified_paths exist
-            for path in modified_paths:
-                path_lst = path.split(" > ")
+            for p in modified_paths:
+                path_lst = p.split(" > ")
                 for i, path in enumerate(path_lst):
+                    if len(path.split(" ")) > 1:
+                        bullet_type = path.split(" ")[0].lower()
+                        bullet = path.split(" ")[-1]
+                    else:
+                        if bullet.isalpha():
+                            bullet_type = "khoản"
+                        else:
+                            bullet_type = "mục"
                     node_order_type = "M_Node"
                     if i == len(path_lst) - 1:
                         node_order_type = "C_Node"
-                    create_node_query = f"MERGE (p:Doc_Node:{node_order_type}:Origin_Node" + "{d_id: $root_id})"
-                    tx.run(create_node_query,root_id = modified_doc_id)
-                
-                
+                    create_node_query = f"MERGE (p:Doc_Node:{node_order_type}:Origin_Node" + "{d_id: $root_id, content: $content, bullet: $bullet, bullet_type: $bullet_type, path: $path})"
+                    tx.run(create_node_query,root_id = modified_doc_id, content = path, bullet=bullet, bullet_type = bullet_type, path = p)
+                # Connect root node with first middle nodes
+                if len(path_lst) > 1:
+                    node_order_type = "M_Node"
+                else:
+                    node_order_type = "C_Node"
+                connect_query = (
+                    f"MATCH (a:Doc_Node:R_Node:Origin_Node {{d_id: $root_id}}), "
+                    f"(b:Doc_Node:{node_order_type}:Origin_Node {{content: $m_content, d_id: $id}}) "
+                    "MERGE (a)-[:PARENT]->(b)"
+                )
+                tx.run(connect_query, root_id=modified_doc_id, m_content=path_lst[0], id=modified_doc_id)
+
+                # Connect middle nodes
+                for i in range(len(path_lst) - 1):
+                    next_node_type = "M_Node"
+                    if i == len(path_lst) - 2:
+                        next_node_type = "C_Node"
+                    connect_query = (
+                        f"MATCH (a:Doc_Node:M_Node:Origin_Node {{content: $node1, d_id: $id, path: $path1}}), "
+                        f"(b:Doc_Node:{next_node_type}:Origin_Node {{content: $node2, d_id: $id, path: $path2}}) "
+                        "MERGE (a)-[:PARENT]->(b)"
+                    )
+                    tx.run(connect_query, node1=path_lst[i], node2=path_lst[i + 1], id = modified_doc_id, path1 = p, path2 = p)                                
+
         else:
             tx.run("""
                 MATCH (a:Doc_Node:R_Node:Origin_Node {d_id: $root_id}), (b:Doc_Node:C_Node:Modified_Node {d_id: $id})
@@ -327,9 +358,9 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
             c_bullet = c_bullet.split(".")[-1]
         else:
             if c_bullet.isalpha():
-                c_bullet_type = "khoản"
+                c_bullet_type = "điểm"
             else:
-                c_bullet_type = "mục"
+                c_bullet_type = "khoản"
         tx.run("MERGE (p:Doc_Node:C_Node:Modified_Node {bullet: $bullet, bullet_type: $bullet_type, content: $content, d_id: $id})", bullet = c_bullet, bullet_type = c_bullet_type, content = content, id = id)
 
         if modified_doc_id:
@@ -351,9 +382,9 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
                     m_bullet = m_bullet.split(" ")[-1]
                 else:
                     if m_bullet.isalpha():
-                        m_bullet_type = "khoản"
+                        m_bullet_type = "điểm"
                     else:
-                        m_bullet_type = "mục"
+                        m_bullet_type = "khoản"
             tx.run("MERGE (p:Doc_Node:M_Node:Modified_Node {bullet: $bullet, bullet_type: $bullet_type, content: $content, d_id: $id})", bullet = m_bullet, bullet_type = m_bullet_type, content = middle_node, id = root_id)
         # Connect root node to first middle node
         tx.run("""
