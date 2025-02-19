@@ -25,6 +25,7 @@ def extract_text(doc):
             appendix_index = temp_idx
     return extracted_text, appendix_index
 
+
 def normalize_bullets(extract_text):
     def check_in_firstn(bullet, end_bullet_idx = 5):
         for i in range(end_bullet_idx):

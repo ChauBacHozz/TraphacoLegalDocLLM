@@ -217,8 +217,6 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
 
         if modified_purpose:
             metadata["modified_purpose"] = max(modified_purpose, key=modified_purpose.get)
-            if modified_content:
-                metadata["modified_content"] = metadata["content"]
         pattern = r'\d{2,3}/\d{4}/(?:NĐ-CP|TT-CP|TT-BYT|QH\d{2})'
 
         modified_doc_id = re.search(pattern, full_path)
@@ -232,7 +230,14 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
         else:
             print("Error!!! Cannot find modified document id", full_path)
 
-        
+        if modified_content:
+            # Subprocess on modified_content (inside [[]])
+            extracted_text = modified_content.split("\n")
+            if "chương" in extracted_text[0].lower() and extracted_text[1].isupper():
+                extracted_text[1] = extracted_text[0] + extracted_text[1]
+                extracted_text = extracted_text[1:]
+            metadata["modified_content"] = extracted_text
+
 
     def create_graph(tx, metadata):
         root_node_content = metadata["heading"]
@@ -291,10 +296,13 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
                 MATCH (a:Doc_Node:M_Node:Modified_Node {content: $node1, d_id: $id}), (b:Doc_Node:M_Node:Modified_Node {content: $node2, d_id: $id})
                 MERGE (a)-[:CONTAIN]->(b)
             """, node1=middle_node_names[i], node2=middle_node_names[i + 1], id = root_id)
+
+
+    # Add properties to metadata before save
     for mtdata in new_metadata:
         # paths = mtdata["path"].split(">")
         sub_process_metadata(mtdata)
-    ic(new_metadata[:30])
+    ic(new_metadata[0])
     # ic(new_metadata[:10])
         # with driver.session() as session:
         #     session.execute_write(create_graph, mtdata)
