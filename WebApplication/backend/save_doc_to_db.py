@@ -294,6 +294,7 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
         # Create root node
         tx.run("MERGE (p:Doc_Node:R_Node:Origin_Node {d_id: $root_id})",root_id = modified_doc_id)
         node_order_type = None
+        print(modified_paths)
         if len(modified_paths) > 0:
             # Create middle nodes if modified_paths exist
             for p in modified_paths:
@@ -316,7 +317,7 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
                     tx.run(create_node_query,root_id = modified_doc_id, content = path, bullet=bullet, bullet_type = bullet_type, path = full_path)
                     if node_order_type == "M_Node":
                         full_path += " > "
-                        
+
                 # Connect root node with first middle nodes
                 if len(path_lst) > 1:
                     node_order_type = "M_Node"
@@ -345,7 +346,7 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
                 tx.run("""
                     MATCH (a:Doc_Node:Origin_Node {d_id: $root_id, path: $modified_path}), (b:Doc_Node:C_Node:Modified_Node {d_id: $id})
                     MERGE (b)-[:MODIFIED]->(a)
-                """, root_id = modified_doc_id, id = c_node_id, modified_path = modified_paths)
+                """, root_id = modified_doc_id, id = c_node_id, modified_path = p)
 
 
         else:
