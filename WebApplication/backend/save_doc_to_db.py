@@ -37,7 +37,6 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
         d_id = metadata["doc_id"]
         content = metadata["content"]
         c_id = metadata["id"]
-        print(metadata["middle_path"])
         # Create root node
         tx.run("""MERGE (p:Doc_Node:R_Node:Origin_Node {d_id: $d_id})
                   SET p.content = $content""", 
@@ -250,8 +249,9 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
             modified_doc_id = modified_doc_id.group()
             metadata["modified_doc_id"] = modified_doc_id
             if "điều khoản" not in metadata["middle_path"].lower():
-                sub_tree = create_tree_paths(modified_heading)
-                metadata["modified_paths"] = sub_tree
+                sub_trees = create_tree_paths(modified_heading)
+                sub_trees = [tree.strip().rstrip(">").lstrip(">") for tree in sub_trees]
+                metadata["modified_paths"] = sub_trees
             else:
                 metadata["modified_paths"] = []
         else:
@@ -294,11 +294,11 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
         # Create root node
         tx.run("MERGE (p:Doc_Node:R_Node:Origin_Node {d_id: $root_id})",root_id = modified_doc_id)
         node_order_type = None
-        print(modified_paths)
         if len(modified_paths) > 0:
             # Create middle nodes if modified_paths exist
             for p in modified_paths:
                 path_lst = p.split(" > ")
+                paths = []
                 full_path = ""
                 for i, path in enumerate(path_lst):
                     if len(path.split(" ")) > 1:
@@ -315,6 +315,7 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
                     full_path += str(bullet_type + " " + bullet)
                     create_node_query = f"MERGE (p:Doc_Node:{node_order_type}:Origin_Node" + "{d_id: $root_id, content: $content, bullet: $bullet, bullet_type: $bullet_type, path: $path})"
                     tx.run(create_node_query,root_id = modified_doc_id, content = path, bullet=bullet, bullet_type = bullet_type, path = full_path)
+                    paths.append(full_path)
                     if node_order_type == "M_Node":
                         full_path += " > "
 
@@ -340,13 +341,19 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
                         f"(b:Doc_Node:{next_node_type}:Origin_Node {{content: $node2, d_id: $id, path: $path2}}) "
                         "MERGE (a)-[:PARENT]->(b)"
                     )
-                    tx.run(connect_query, node1=path_lst[i], node2=path_lst[i + 1], id = modified_doc_id, path1 = p, path2 = p)                                
+                    tx.run(connect_query, node1=path_lst[i], node2=path_lst[i + 1], id = modified_doc_id, path1 = paths[i], path2 = paths[i+1])                                
 
                 # Connect last middle node to modified node
                 tx.run("""
                     MATCH (a:Doc_Node:Origin_Node {d_id: $root_id, path: $modified_path}), (b:Doc_Node:C_Node:Modified_Node {d_id: $id})
                     MERGE (b)-[:MODIFIED]->(a)
-                """, root_id = modified_doc_id, id = c_node_id, modified_path = p)
+                """, root_id = modified_doc_id, id = c_node_id, modified_path = full_path)
+                if full_path != p:
+                    print("ERROR")
+                    print("Modified path:", p)
+                    print("Full path:", full_path)
+                    print("Full path list:", modified_paths)
+                    print("Modified content id:", c_node_id)
 
 
         else:
@@ -357,7 +364,6 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
 
     def create_modified_sub_graph(tx, modified_content):
         pass
-
 
 
     def create_graph(tx, metadata):
