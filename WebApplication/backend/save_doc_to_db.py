@@ -30,44 +30,23 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
         hash_object = hashlib.sha256(bytes_representation)  # Use SHA-256 (or hashlib.md5 for a smaller hash)
         hash_int = int(hash_object.hexdigest(), 16) % (10**10)
         mtdata["id"] = hash_int
-    # # Append new data
-    # metadata.extend(new_metadata)
 
-    # # Save the updated FAISS index and metadata
-    # save_faiss_and_metadata(index, path_index, data, metadata)
-
-    # # Verify update
-    # index, path_index, data, metadata = load_or_initialize_faiss()
-    # print(f"📌 Updated FAISS Index: {index.ntotal} entries")
-    # print(f"📌 Updated Data: {len(data)} entries")
-    # print(f"📌 Updated Metadata: {len(metadata)} entries")
+        
     def create_graph(tx, metadata):
         root_node_content = metadata["heading"]
-        root_id = metadata["doc_id"]
+        d_id = metadata["doc_id"]
         content = metadata["content"]
-        id = metadata["id"]
+        c_id = metadata["id"]
+        print(metadata["middle_path"])
         # Create root node
-        tx.run("MERGE (p:Doc_Node:R_Node:Origin_Node {content: $content, d_id: $id})", content = root_node_content,  id = root_id)
-
-        # Create content node, content_bullet = bullet from c_node's content
-        
-        c_bullet = content.split(" ")[0].rstrip(".,:)")
-        if len(c_bullet.split(".")) > 1:
-            c_bullet_type = "khoản"
-            c_bullet = c_bullet.split(".")[-1]
-        else:
-            if c_bullet.isalpha():
-                c_bullet_type = "điểm"
-            elif c_bullet.isdigit():
-                c_bullet_type = "khoản"
-            else:
-                c_bullet_type = ""
-
-        tx.run("MERGE (p:Doc_Node:C_Node:Origin_Node {bullet: $bullet, bullet_type: $bullet_type, content: $content, d_id: $id})", bullet = c_bullet, bullet_type = c_bullet_type, content = content, id = id)
+        tx.run("""MERGE (p:Doc_Node:R_Node:Origin_Node {d_id: $d_id})
+                  SET p.content = $content""", content = root_node_content,  d_id = d_id)
 
         # Create middle nodes
+        full_path = ""
         middle_node_names = metadata["middle_path"].split(" > ")
         for middle_node in middle_node_names:
+            # Create bullet and bullet type
             if "chương" in middle_node.lower():
                 m_bullet = middle_node.split(" ")[1]
                 m_bullet_type = "chương"
@@ -84,23 +63,49 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
                         m_bullet_type = "điểm"
                     else:
                         m_bullet_type = "khoản"
-            tx.run("MERGE (p:Doc_Node:M_Node:Origin_Node {bullet: $bullet, bullet_type: $bullet_type, content: $content, d_id: $id})", bullet = m_bullet, bullet_type = m_bullet_type, content = middle_node, id = root_id)
+            full_path = full_path + str(m_bullet_type + " " + m_bullet)
+            # Create path property
+            tx.run("MERGE (p:Doc_Node:M_Node:Origin_Node {bullet: $bullet, bullet_type: $bullet_type, content: $content, d_id: $d_id, path: $path})", bullet = m_bullet, bullet_type = m_bullet_type, content = middle_node, d_id = d_id, path = full_path)
+            full_path += " > "
+
+
+        # Create content node, content_bullet = bullet from c_node's content
+        c_bullet = content.split(" ")[0].rstrip(".,:)")
+        if len(c_bullet.split(".")) > 1:
+            c_bullet_type = "khoản"
+            c_bullet = c_bullet.split(".")[-1]
+        else:
+            if c_bullet.isalpha():
+                c_bullet_type = "điểm"
+            elif c_bullet.isdigit():
+                c_bullet_type = "khoản"
+            else:
+                c_bullet_type = ""
+        full_path = full_path + str(c_bullet_type + " " + c_bullet)
+        tx.run("""MERGE (p:Doc_Node:C_Node:Origin_Node {d_id: $d_id, path: $path})
+               SET p.bullet = $bullet, 
+                   p.bullet_type = $bullet_type, 
+                   p.content = $content, 
+                   p.d_id = $d_id, 
+                   p.c_id: $c_id""", bullet = c_bullet, bullet_type = c_bullet_type, content = content, d_id = d_id, c_id = c_id, path = full_path)
+
+
         # Connect root node to first middle node
         tx.run("""
-            MATCH (a:Doc_Node:R_Node:Origin_Node {content: $p_content, d_id: $root_id}), (b:Doc_Node:M_Node:Origin_Node {content: $m_content, d_id: $id})
-            MERGE (a)-[:PARENT]->(b)
-        """, p_content=root_node_content, m_content=middle_node_names[0], root_id = root_id, id = root_id)
+            MATCH (a:Doc_Node:R_Node:Origin_Node {content: $p_content, d_id: $d_id}), (b:Doc_Node:M_Node:Origin_Node {content: $m_content, d_id: $d_id})
+            MERGE (a)-[:CONTAIN]->(b)
+        """, p_content=root_node_content, m_content=middle_node_names[0], d_id = d_id)
         # Connect last middle node to content node
         tx.run("""
-            MATCH (a:Doc_Node:M_Node:Origin_Node {content: $m_content, d_id: $root_id}), (b:Doc_Node:C_Node:Origin_Node {content: $c_content, d_id: $id})
+            MATCH (a:Doc_Node:M_Node:Origin_Node {content: $m_content, d_id: $d_id}), (b:Doc_Node:C_Node:Origin_Node {content: $c_content, c_id: $c_id})
             MERGE (a)-[:CONTAIN]->(b)
-        """, m_content=middle_node_names[-1], c_content=content, root_id = root_id, id = id)
+        """, m_content=middle_node_names[-1], c_content=content, d_id = d_id, c_id = c_id)
         # Connect middle nodes
         for i in range(len(middle_node_names) - 1):
             tx.run("""
-                MATCH (a:Doc_Node:M_Node:Origin_Node {content: $node1, d_id: $id}), (b:Doc_Node:M_Node:Origin_Node {content: $node2, d_id: $id})
+                MATCH (a:Doc_Node:M_Node:Origin_Node {content: $node1, d_id: $d_id}), (b:Doc_Node:M_Node:Origin_Node {content: $node2, d_id: $d_id})
                 MERGE (a)-[:CONTAIN]->(b)
-            """, node1=middle_node_names[i], node2=middle_node_names[i + 1], id = root_id)
+            """, node1=middle_node_names[i], node2=middle_node_names[i + 1], d_id = d_id)
 
         # Create nodes
         # for node in nodes:
