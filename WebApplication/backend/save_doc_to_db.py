@@ -40,7 +40,8 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
         print(metadata["middle_path"])
         # Create root node
         tx.run("""MERGE (p:Doc_Node:R_Node:Origin_Node {d_id: $d_id})
-                  SET p.content = $content""", content = root_node_content,  d_id = d_id)
+                  SET p.content = $content""", 
+                  content = root_node_content,  d_id = d_id)
 
         # Create middle nodes
         full_path = ""
@@ -65,7 +66,11 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
                         m_bullet_type = "khoản"
             full_path = full_path + str(m_bullet_type + " " + m_bullet)
             # Create path property
-            tx.run("MERGE (p:Doc_Node:M_Node:Origin_Node {bullet: $bullet, bullet_type: $bullet_type, content: $content, d_id: $d_id, path: $path})", bullet = m_bullet, bullet_type = m_bullet_type, content = middle_node, d_id = d_id, path = full_path)
+            tx.run("""MERGE (p:Doc_Node:M_Node:Origin_Node {d_id: $d_id, path: $path})
+                      SET p.bullet = $bullet, 
+                          p.bullet_type = $bullet_type,
+                          p.content = $content""", 
+                          bullet = m_bullet, bullet_type = m_bullet_type, content = middle_node, d_id = d_id, path = full_path)
             full_path += " > "
 
 
@@ -87,7 +92,8 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
                    p.bullet_type = $bullet_type, 
                    p.content = $content, 
                    p.d_id = $d_id, 
-                   p.c_id: $c_id""", bullet = c_bullet, bullet_type = c_bullet_type, content = content, d_id = d_id, c_id = c_id, path = full_path)
+                   p.c_id = $c_id""", 
+                   bullet = c_bullet, bullet_type = c_bullet_type, content = content, d_id = d_id, c_id = c_id, path = full_path)
 
 
         # Connect root node to first middle node
@@ -288,11 +294,11 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
         # Create root node
         tx.run("MERGE (p:Doc_Node:R_Node:Origin_Node {d_id: $root_id})",root_id = modified_doc_id)
         node_order_type = None
-        # Link root node to current modified content node
         if len(modified_paths) > 0:
             # Create middle nodes if modified_paths exist
             for p in modified_paths:
                 path_lst = p.split(" > ")
+                full_path = ""
                 for i, path in enumerate(path_lst):
                     if len(path.split(" ")) > 1:
                         bullet_type = path.split(" ")[0].lower()
@@ -305,8 +311,12 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
                     node_order_type = "M_Node"
                     if i == len(path_lst) - 1:
                         node_order_type = "C_Node"
+                    full_path += str(bullet_type + " " + bullet)
                     create_node_query = f"MERGE (p:Doc_Node:{node_order_type}:Origin_Node" + "{d_id: $root_id, content: $content, bullet: $bullet, bullet_type: $bullet_type, path: $path})"
-                    tx.run(create_node_query,root_id = modified_doc_id, content = path, bullet=bullet, bullet_type = bullet_type, path = p)
+                    tx.run(create_node_query,root_id = modified_doc_id, content = path, bullet=bullet, bullet_type = bullet_type, path = full_path)
+                    if node_order_type == "M_Node":
+                        full_path += " > "
+                        
                 # Connect root node with first middle nodes
                 if len(path_lst) > 1:
                     node_order_type = "M_Node"
@@ -333,9 +343,9 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
 
                 # Connect last middle node to modified node
                 tx.run("""
-                    MATCH (a:Doc_Node:C_Node:Origin_Node {d_id: $root_id, path: $path, content: $content}), (b:Doc_Node:C_Node:Modified_Node {d_id: $id})
+                    MATCH (a:Doc_Node:Origin_Node {d_id: $root_id, path: $modified_path}), (b:Doc_Node:C_Node:Modified_Node {d_id: $id})
                     MERGE (b)-[:MODIFIED]->(a)
-                """, root_id = modified_doc_id, id = c_node_id, path = p, content = path_lst[-1])
+                """, root_id = modified_doc_id, id = c_node_id, modified_path = modified_paths)
 
 
         else:
