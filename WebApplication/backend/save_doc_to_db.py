@@ -163,10 +163,10 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
                 if check_same_type(r, first_bul):
                     final_res.append(fix_bul + " " + r)
             return final_res
-        def flatten_tree(tree, parent_path="", separator=" > "):
+        def flatten_tree(tree, CONTAIN_path="", separator=" > "):
             flat_list = []
             for key, value in tree.items():
-                current_path = f"{parent_path}{separator}{key}" if parent_path else key
+                current_path = f"{CONTAIN_path}{separator}{key}" if CONTAIN_path else key
                 # print(f"Processing: {current_path}")  # Debugging step
                 if value:  # Check if the value is not blank OrderedDict
                     flat_list.extend(flatten_tree(value, current_path, separator))
@@ -250,8 +250,8 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
             metadata["modified_doc_id"] = modified_doc_id
             if "điều khoản" not in metadata["middle_path"].lower():
                 sub_trees = create_tree_paths(modified_heading)
-                sub_trees = [tree.strip().rstrip(">").lstrip(">") for tree in sub_trees]
-                metadata["modified_paths"] = sub_trees
+                trees = [tree.strip().rstrip(">").strip() for tree in sub_trees]
+                metadata["modified_paths"] = trees
             else:
                 metadata["modified_paths"] = []
         else:
@@ -327,7 +327,7 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
                 connect_query = (
                     f"MATCH (a:Doc_Node:R_Node:Origin_Node {{d_id: $root_id}}), "
                     f"(b:Doc_Node:{node_order_type}:Origin_Node {{content: $m_content, d_id: $id}}) "
-                    "MERGE (a)-[:PARENT]->(b)"
+                    "MERGE (a)-[:CONTAIN]->(b)"
                 )
                 tx.run(connect_query, root_id=modified_doc_id, m_content=path_lst[0], id=modified_doc_id)
 
@@ -339,7 +339,7 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
                     connect_query = (
                         f"MATCH (a:Doc_Node:M_Node:Origin_Node {{content: $node1, d_id: $id, path: $path1}}), "
                         f"(b:Doc_Node:{next_node_type}:Origin_Node {{content: $node2, d_id: $id, path: $path2}}) "
-                        "MERGE (a)-[:PARENT]->(b)"
+                        "MERGE (a)-[:CONTAIN]->(b)"
                     )
                     tx.run(connect_query, node1=path_lst[i], node2=path_lst[i + 1], id = modified_doc_id, path1 = paths[i], path2 = paths[i+1])                                
 
@@ -418,7 +418,7 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
         # Connect root node to first middle node
         tx.run("""
             MATCH (a:Doc_Node:R_Node:Modified_Node {content: $p_content, d_id: $root_id}), (b:Doc_Node:M_Node:Modified_Node {content: $m_content, d_id: $id})
-            MERGE (a)-[:PARENT]->(b)
+            MERGE (a)-[:CONTAIN]->(b)
         """, p_content=root_node_content, m_content=middle_node_names[0], root_id = root_id, id = root_id)
         # Connect last middle node to content node
         tx.run("""
