@@ -37,17 +37,15 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
         d_id = metadata["doc_id"]
         content = metadata["content"]
         c_id = metadata["id"]
-        nodes = []
         # Create root node
-        r_node = tx.run("""MERGE (p:Doc_Node:R_Node:Origin_Node {d_id: $d_id})
-                  SET p.content = $content
-                  RETURN p""", 
+        tx.run("""MERGE (p:Doc_Node:R_Node:Origin_Node {d_id: $d_id})
+                  SET p.content = $content""", 
                   content = root_node_content,  d_id = d_id)
-        nodes.append(list(r_node)[0]["p"])
+        
         # Create middle nodes
+        nodes = []
         full_path = ""
         middle_node_names = metadata["middle_path"].split(" > ")
-        nodes = []
         for middle_node in middle_node_names:
             # Create bullet and bullet type
             if "chương" in middle_node.lower():
@@ -87,9 +85,11 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
                 RETURN value AS node;
             """)
             m_node = tx.run(create_node_query, d_id = d_id, path = full_path, target_path = full_path, content = middle_node, bullet = m_bullet, bullet_type = m_bullet_type)
-            full_path += " > "
             m_node = list(m_node)
-            nodes.append(m_node[0]["n"])
+            full_path += " > "
+            for record in m_node:
+                # if "node" in record and record["node"] is not None:
+                nodes.append(record["node"]["new"].element_id)
 
 
         # Create content node, content_bullet = bullet from c_node's content
@@ -126,12 +126,17 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
             RETURN value AS node;
         """)
         c_node = tx.run(create_node_query, d_id = d_id, c_id = c_id, path = full_path, target_path = full_path, content = content, bullet = c_bullet, bullet_type = c_bullet_type)
-        nodes.append(list(c_node)[0]["node"])
+        c_node = list(c_node)
+        for record in c_node:
+            # if "node" in record and record["node"] is not None:
+            nodes.append(record["node"]["new"].element_id)
         # Connect root node to first middle node
-        # tx.run("""
-        #     MATCH (a:Doc_Node:R_Node:Origin_Node {content: $p_content, d_id: $d_id}), (b:Doc_Node:M_Node:Origin_Node {content: $m_content, d_id: $d_id})
-        #     MERGE (a)-[:CONTAIN]->(b)
-        # """, p_content=root_node_content, m_content=middle_node_names[0], d_id = d_id)
+        print(nodes[0])
+        tx.run("""
+            MATCH (a:Doc_Node:R_Node:Origin_Node {d_id: $d_id}), (b:Doc_Node:Origin_Node)
+            WHERE elementId(b) = $first_middle_node_id
+            MERGE (a)-[:CONTAIN]->(b)
+            """, d_id = d_id, first_middle_node_id = nodes[0])
         # # Connect last middle node to content node
         # tx.run("""
         #     MATCH (a:Doc_Node:M_Node:Origin_Node {content: $m_content, d_id: $d_id}), (b:Doc_Node:C_Node:Origin_Node {content: $c_content, c_id: $c_id})
@@ -140,9 +145,10 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
         # Connect middle nodes
         for i in range(len(nodes) - 1):
             tx.run("""
-                MATCH (a:Doc_Node:Origin_Node {id: $id1}), (b:Doc_Node:Origin_Node {id: $id2})
+                MATCH (a:Doc_Node:Origin_Node), (b:Doc_Node:Origin_Node)
+                WHERE elementId(a) = $firstEId AND elementId(b) = $secondEId
                 MERGE (a)-[:CONTAIN]->(b)
-            """, id1=nodes[i].id, id2=nodes[i + 1].id)
+            """, firstEId=nodes[i], secondEId=nodes[i + 1])
 
         # Create nodes
         # for node in nodes:
@@ -271,6 +277,7 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver, doc_type = 1):
         if "bãi bỏ" in full_path.lower():
             modified_purpose["bãi bỏ"] = full_path.lower().rfind("bãi bỏ")
 
+        black_lst_path = None
         if modified_purpose:
             metadata["modified_purpose"] = max(modified_purpose, key=modified_purpose.get)
         pattern = r'\d{2,3}/\d{4}/(?:NĐ-CP|TT-CP|TT-BYT|QH\d{2})'
