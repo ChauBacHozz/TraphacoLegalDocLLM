@@ -37,14 +37,17 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
         d_id = metadata["doc_id"]
         content = metadata["content"]
         c_id = metadata["id"]
+        nodes = []
         # Create root node
-        tx.run("""MERGE (p:Doc_Node:R_Node:Origin_Node {d_id: $d_id})
-                  SET p.content = $content""", 
+        r_node = tx.run("""MERGE (p:Doc_Node:R_Node:Origin_Node {d_id: $d_id})
+                  SET p.content = $content
+                  RETURN p""", 
                   content = root_node_content,  d_id = d_id)
-
+        nodes.append(list(r_node)[0]["p"])
         # Create middle nodes
         full_path = ""
         middle_node_names = metadata["middle_path"].split(" > ")
+        nodes = []
         for middle_node in middle_node_names:
             # Create bullet and bullet type
             if "chương" in middle_node.lower():
@@ -83,9 +86,10 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
                 ) YIELD value
                 RETURN value AS node;
             """)
-            tx.run(create_node_query, d_id = d_id, path = full_path, target_path = full_path, content = middle_node, bullet = m_bullet, bullet_type = m_bullet_type)
+            m_node = tx.run(create_node_query, d_id = d_id, path = full_path, target_path = full_path, content = middle_node, bullet = m_bullet, bullet_type = m_bullet_type)
             full_path += " > "
-
+            m_node = list(m_node)
+            nodes.append(m_node[0]["n"])
 
 
         # Create content node, content_bullet = bullet from c_node's content
@@ -115,29 +119,30 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
             WITH n, $d_id AS d_id, $path AS path, $content AS content, $bullet AS bullet, $bullet_type AS bullet_type, $c_id AS c_id
             CALL apoc.do.when(
                 n IS NULL, 
-                "CREATE (new:Doc_Node:M_Node:Origin_Node {d_id: $d_id, c_id: $c_id, path: $path, content: $content, bullet: $bullet, bullet_type: $bullet_type}) RETURN new", 
+                "CREATE (new:Doc_Node:C_Node:Origin_Node {d_id: $d_id, c_id: $c_id, path: $path, content: $content, bullet: $bullet, bullet_type: $bullet_type}) RETURN new", 
                 "RETURN n AS new", 
                 {d_id: d_id, c_id: c_id, path: path, content: content, bullet: bullet, bullet_type: bullet_type, n: n}
             ) YIELD value
             RETURN value AS node;
         """)
-        tx.run(create_node_query, d_id = d_id, c_id = c_id, path = full_path, target_path = full_path, content = content, bullet = c_bullet, bullet_type = c_bullet_type)
+        c_node = tx.run(create_node_query, d_id = d_id, c_id = c_id, path = full_path, target_path = full_path, content = content, bullet = c_bullet, bullet_type = c_bullet_type)
+        nodes.append(list(c_node)[0]["node"])
         # Connect root node to first middle node
-        tx.run("""
-            MATCH (a:Doc_Node:R_Node:Origin_Node {content: $p_content, d_id: $d_id}), (b:Doc_Node:M_Node:Origin_Node {content: $m_content, d_id: $d_id})
-            MERGE (a)-[:CONTAIN]->(b)
-        """, p_content=root_node_content, m_content=middle_node_names[0], d_id = d_id)
-        # Connect last middle node to content node
-        tx.run("""
-            MATCH (a:Doc_Node:M_Node:Origin_Node {content: $m_content, d_id: $d_id}), (b:Doc_Node:C_Node:Origin_Node {content: $c_content, c_id: $c_id})
-            MERGE (a)-[:CONTAIN]->(b)
-        """, m_content=middle_node_names[-1], c_content=content, d_id = d_id, c_id = c_id)
+        # tx.run("""
+        #     MATCH (a:Doc_Node:R_Node:Origin_Node {content: $p_content, d_id: $d_id}), (b:Doc_Node:M_Node:Origin_Node {content: $m_content, d_id: $d_id})
+        #     MERGE (a)-[:CONTAIN]->(b)
+        # """, p_content=root_node_content, m_content=middle_node_names[0], d_id = d_id)
+        # # Connect last middle node to content node
+        # tx.run("""
+        #     MATCH (a:Doc_Node:M_Node:Origin_Node {content: $m_content, d_id: $d_id}), (b:Doc_Node:C_Node:Origin_Node {content: $c_content, c_id: $c_id})
+        #     MERGE (a)-[:CONTAIN]->(b)
+        # """, m_content=middle_node_names[-1], c_content=content, d_id = d_id, c_id = c_id)
         # Connect middle nodes
-        for i in range(len(middle_node_names) - 1):
+        for i in range(len(nodes) - 1):
             tx.run("""
-                MATCH (a:Doc_Node:M_Node:Origin_Node {content: $node1, d_id: $d_id}), (b:Doc_Node:M_Node:Origin_Node {content: $node2, d_id: $d_id})
+                MATCH (a:Doc_Node:Origin_Node {id: $id1}), (b:Doc_Node:Origin_Node {id: $id2})
                 MERGE (a)-[:CONTAIN]->(b)
-            """, node1=middle_node_names[i], node2=middle_node_names[i + 1], d_id = d_id)
+            """, id1=nodes[i].id, id2=nodes[i + 1].id)
 
         # Create nodes
         # for node in nodes:
@@ -154,7 +159,7 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
         with driver.session() as session:
             session.execute_write(create_graph, mtdata)
 
-def save_modified_doc_to_db(new_texts, new_metadata, driver):
+def save_modified_doc_to_db(new_texts, new_metadata, driver, doc_type = 1):
     # # Add id to current new_metadata
     def count_nodes(tx):
         query = "MATCH (n) RETURN count(n) AS node_count"
@@ -269,11 +274,15 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
         if modified_purpose:
             metadata["modified_purpose"] = max(modified_purpose, key=modified_purpose.get)
         pattern = r'\d{2,3}/\d{4}/(?:NĐ-CP|TT-CP|TT-BYT|QH\d{2})'
-
-        modified_doc_id = re.search(pattern, full_path)
-
+        if doc_type == 1:
+            modified_doc_id = re.search(pattern, full_path)
+        else:
+            modified_doc_id = metadata["modified_doc_id"]
+        # else:
+        #     modified_doc_id = 
         if modified_doc_id:
-            modified_doc_id = modified_doc_id.group()
+            if doc_type == 1:
+                modified_doc_id = modified_doc_id.group()
             metadata["modified_doc_id"] = modified_doc_id
             if "điều khoản" not in metadata["middle_path"].lower():
                 sub_trees = create_tree_paths(modified_heading)

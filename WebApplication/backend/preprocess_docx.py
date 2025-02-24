@@ -328,7 +328,6 @@ def preprocess_chunks(chunks, heading, doc_number):
     Process raw chunks into a structured format with chapter, section, article, and content.
     """
     processed_chunks = []
-    print("Doc number:", doc_number)
     for idx, chunk in enumerate(chunks):
         # Clean up extra whitespace
         chunk = chunk.strip()

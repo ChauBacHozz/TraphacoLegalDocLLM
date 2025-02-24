@@ -98,6 +98,8 @@ def save_modified_doc_pre_appendix_type2_to_db(extracted_text, heading, doc_numb
             break
 
     if heading_idx:
+        modified_doc_id = re.search(r"luật dược số (.+)", "".join(extracted_text[:heading_idx]), re.IGNORECASE).group(1).strip().split(" ")[0]
+
         extracted_text = extracted_text[heading_idx:]
     else:
         print("ERROR")
@@ -111,22 +113,23 @@ def save_modified_doc_pre_appendix_type2_to_db(extracted_text, heading, doc_numb
     flattened_tree = flatten_tree(tree)
     # # Split data into chunks
     chunks = [text[0] for text in flattened_tree]
+
     # # chunks = [f"{path}: {text}" for path, text in flattened_tree]
     # # Preprocess chunks
-    print("DOC NUMBER:", doc_number)
     preprocessed_chunks = preprocess_chunks(chunks, heading, doc_number)
     # Extract 'text' atribute from preprocessed_chunks
     texts = [chunk['content'] for chunk in preprocessed_chunks]
     metadata_lst = []
     for chunk in preprocessed_chunks:
         # chunk.pop("content")
+        chunk["modified_doc_id"] = modified_doc_id
         metadata_lst.append(chunk)
 
     batch_size = 10    
     print("☑️ saving pre-appendix data")
 
     for i in stqdm(range(0, len(metadata_lst), batch_size)):
-        save_modified_doc_to_db(texts[i:i+batch_size],metadata_lst[i:i+batch_size], driver)
+        save_modified_doc_to_db(texts[i:i+batch_size],metadata_lst[i:i+batch_size], driver, doc_type=2)
 
 def save_origin_doc_pre_appendix_type1_to_db(extracted_text, heading, doc_number, driver):
     heading_idx = None
