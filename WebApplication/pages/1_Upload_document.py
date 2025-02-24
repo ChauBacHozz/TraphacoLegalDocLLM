@@ -56,7 +56,7 @@ upload_files = st.file_uploader(
 def save_modified_doc_pre_appendix_type1_to_db(extracted_text, heading, doc_number, driver):
     heading_idx = None
     for i, text in enumerate(extracted_text[:100]):
-        if "chương" in text.lower():
+        if ("Chương" in text or "Mục" in text or "Điều" in text) and not text.isupper():
             heading_idx = i
             break
 
@@ -65,7 +65,6 @@ def save_modified_doc_pre_appendix_type1_to_db(extracted_text, heading, doc_numb
     else:
         print("ERROR")
         return
-
     full_text = normalize_modified_text_bullets(extracted_text)
 
     # # Convert text list to tree base to manage content 
@@ -91,7 +90,84 @@ def save_modified_doc_pre_appendix_type1_to_db(extracted_text, heading, doc_numb
     for i in stqdm(range(0, len(metadata_lst), batch_size)):
         save_modified_doc_to_db(texts[i:i+batch_size],metadata_lst[i:i+batch_size], driver)
 
+def save_modified_doc_pre_appendix_type2_to_db(extracted_text, heading, doc_number, driver):
+    heading_idx = None
+    for i, text in enumerate(extracted_text[:100]):
+        if ("Chương" in text or "Mục" in text or "Điều" in text) and not text.isupper():
+            heading_idx = i
+            break
+
+    if heading_idx:
+        extracted_text = extracted_text[heading_idx:]
+    else:
+        print("ERROR")
+        return
+    full_text = normalize_modified_text_bullets(extracted_text)
+
+    # # Convert text list to tree base to manage content 
+    tree = convert_text_list_to_tree(full_text)
+    
+    # # Flatten tree into list of strings
+    flattened_tree = flatten_tree(tree)
+    # # Split data into chunks
+    chunks = [text[0] for text in flattened_tree]
+    # # chunks = [f"{path}: {text}" for path, text in flattened_tree]
+    # # Preprocess chunks
+    print("DOC NUMBER:", doc_number)
+    preprocessed_chunks = preprocess_chunks(chunks, heading, doc_number)
+    # Extract 'text' atribute from preprocessed_chunks
+    texts = [chunk['content'] for chunk in preprocessed_chunks]
+    metadata_lst = []
+    for chunk in preprocessed_chunks:
+        # chunk.pop("content")
+        metadata_lst.append(chunk)
+
+    batch_size = 10    
+    print("☑️ saving pre-appendix data")
+
+    for i in stqdm(range(0, len(metadata_lst), batch_size)):
+        save_modified_doc_to_db(texts[i:i+batch_size],metadata_lst[i:i+batch_size], driver)
+
 def save_origin_doc_pre_appendix_type1_to_db(extracted_text, heading, doc_number, driver):
+    heading_idx = None
+    for i, text in enumerate(extracted_text[:100]):
+        if "chương" in text.lower():
+            heading_idx = i
+            break
+
+    if heading_idx:
+        extracted_text = extracted_text[heading_idx:]
+    else:
+        print("ERROR")
+        return
+
+    full_text = normalize_bullets(extracted_text)
+    # Convert text list to tree base to manage content 
+    tree = convert_text_list_to_tree(full_text)
+    
+    # save_tree_to_db(tree, driver)
+    # Flatten tree into list of strings
+    flattened_tree = flatten_tree(tree)
+    # ic(flattened_tree)
+    # Split data into chunks
+    chunks = [text[0] for text in flattened_tree]
+    # chunks = [f"{path}: {text}" for path, text in flattened_tree]
+    # Preprocess chunks
+    preprocessed_chunks = preprocess_chunks(chunks, heading, doc_number)
+    # Extract 'text' atribute from preprocessed_chunks
+    texts = [chunk['content'] for chunk in preprocessed_chunks]
+    metadata_lst = []
+    for chunk in preprocessed_chunks:
+        # chunk.pop("content")
+        metadata_lst.append(chunk)
+
+    batch_size = 10    
+    print("☑️ saving pre-appendix data")
+
+    for i in stqdm(range(0, len(metadata_lst), batch_size)):
+        save_origin_doc_to_db(texts[i:i+batch_size],metadata_lst[i:i+batch_size], driver)
+
+def save_origin_doc_pre_appendix_type2_to_db(extracted_text, heading, doc_number, driver):
     heading_idx = None
     for i, text in enumerate(extracted_text[:100]):
         if "chương" in text.lower():
@@ -206,10 +282,16 @@ if st.button("Upload to database"):
                 st.toast(f"Saved {upload_file.name} database✅")
 
         elif "luật" in heading.lower():
-            if "sửa đổi" in heading.lower():
-                print("Luật sửa đổi bổ sung")
+            if "sửa đổi" in heading.lower() or "bổ sung" in heading.lower() or "bãi bỏ" in heading.lower():
+                # Văn bản sửa đổi
+                save_modified_doc_pre_appendix_type2_to_db(pre_appendix_text, heading, doc_number, driver)
             else:
-                print("Luật gốc")
+                # Văn bản gốc
+                if appendix_index != None:
+                    print("Có phụ lục")
+                    save_origin_doc_appendix_type1_to_db(doc_file, heading, doc_number, driver)
+                save_origin_doc_pre_appendix_type2_to_db(pre_appendix_text, heading, doc_number, driver)
+                st.toast(f"Saved {upload_file.name} database✅")
         else:
             print("ERROR")
         # Merge bullet from extracted text
