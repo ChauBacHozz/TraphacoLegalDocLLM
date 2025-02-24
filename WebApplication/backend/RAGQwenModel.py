@@ -17,7 +17,8 @@ from langchain_community.vectorstores import Neo4jVector
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.schema import Document
 from langchain.vectorstores.utils import maximal_marginal_relevance
-
+from neo4j import GraphDatabase
+from icecream import ic
 # PATH = 'D:/VS_Workspace/LLM/.cache'
 # os.environ['TRANSFORMERS_CACHE'] = PATH
 # os.environ['HF_HOME'] = PATH
@@ -63,6 +64,12 @@ class RAGQwen():
 
         # Khởi tạo mô hình LLM và tokenizer
         self.model, self.tokenizer = self.load_huggingface_model(self.model_file)
+        WINDOWS_IP = "28.11.5.39"
+        URI = f"bolt://{WINDOWS_IP}:7687"
+        USERNAME = "neo4j"
+        PASSWORD = "phongthang2012"
+
+        self.driver = GraphDatabase.driver(URI, auth=(USERNAME, PASSWORD))
     def load_faiss_and_data(self, index_path, path_index_path, data_path, metadata_path):
         index = faiss.read_index(index_path)
         path_index = faiss.read_index(path_index_path)
@@ -86,6 +93,7 @@ class RAGQwen():
     def count_tokens_underthesea(self, text):
         tokens = word_tokenize(text, format="text").split()
         return len(tokens)
+
     def search_query_from_path(self, query: str, k =10):
         """
         Perform a similarity search on the vector database.
@@ -128,6 +136,28 @@ class RAGQwen():
         # Return re-ranked documents based on MMR indices
         hybrid_results = [vector_documents[i] for i in hybrid_indices]
         final_passages = hybrid_results + keyword_documents
+
+
+        # Làm giàu thông tin retrieval data
+        def get_sub_info(tx, doc_id, path):
+            query_sub_info = """ MATCH (n:Doc_Node {d_id: $d_id})
+                                WHERE n.path STARTS WITH $path 
+                                RETURN n ORDER BY elementId(n)
+                             """
+            result = tx.run(query_sub_info, d_id = doc_id, path = path)
+            return [record["n"] for record in result]
+        
+        final_results = []
+        for passage in final_passages:
+            doc_id = passage.metadata["d_id"]
+            path = passage.metadata["path"]
+            if path:
+                with self.driver.session() as session:
+                    nodes_list = session.read_transaction(get_sub_info, doc_id, path)
+                    ic(nodes_list)
+
+
+
         final_passages_full = []
         final_passages_path = []
         for passage in final_passages:
