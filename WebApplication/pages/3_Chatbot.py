@@ -11,9 +11,6 @@ st.title("Legal chatbot LLM")
 
 # with st.spinner("Loading RAG model"):
 #     rag_model = get_model()
-FAISS_INDEX_PATH = "db/faiss_index.bin"
-DATA_PATH = "db/data.pkl"
-METADATA_PATH = "db/metadata.pkl"
 
 def display_tokens(token_stream, container):
     """Display tokens one by one in the Streamlit app."""
@@ -26,40 +23,36 @@ def display_tokens(token_stream, container):
 if "rag_model" in st.session_state:
     rag_model = st.session_state.rag_model
 
-# Load FAISS index, data and metadata if they exist, otherwise initialize
-    if os.path.exists(FAISS_INDEX_PATH) and os.path.exists(DATA_PATH):
-        rag_model.get_model_ready()
+    rag_model.get_model_ready()
 
-        if "messages" not in st.session_state:
-            st.session_state.messages = []
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
 
-        for message in st.session_state.messages:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
 
 
-        # Handle user input
-        if prompt := st.chat_input("Nhập câu hỏi của bạn..."):
-            with st.chat_message("user"):
-                st.markdown(prompt)
-            
-            st.session_state.messages.append({"role": "user", "content": prompt})
+    # Handle user input
+    if prompt := st.chat_input("Nhập câu hỏi của bạn..."):
+        with st.chat_message("user"):
+            st.markdown(prompt)
+        
+        st.session_state.messages.append({"role": "user", "content": prompt})
 
-            # Generate model response
-            with st.spinner("Hãy chờ chút, mô hình đang trả lời!!!!"):
-                response = rag_model.rag_answer(prompt)  # Use the loaded model
-            st.success("Mô hình đã suy luận xong, thực hiện trả lời!")
+        # Generate model response
+        with st.spinner("Hãy chờ chút, mô hình đang trả lời!!!!"):
+            response = rag_model.rag_answer(prompt)  # Use the loaded model
+        st.success("Mô hình đã suy luận xong, thực hiện trả lời!")
 
-            # Typing effect for the assistant's response
-            with st.chat_message("assistant"):
-                message_container = st.empty()  # Create a container to display the text
-                display_tokens(response, message_container)
+        # Typing effect for the assistant's response
+        with st.chat_message("assistant"):
+            message_container = st.empty()  # Create a container to display the text
+            display_tokens(response, message_container)
 
-            st.session_state.messages.append({"role": "assistant", "content": response})
+        st.session_state.messages.append({"role": "assistant", "content": response})
 
-    else:
-        st.write("No data found in session state.")
 else:
     st.write("No data found in session state.")
 
