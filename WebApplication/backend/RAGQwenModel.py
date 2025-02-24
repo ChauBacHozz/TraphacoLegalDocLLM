@@ -131,11 +131,16 @@ class RAGQwen():
         final_passages_full = []
         final_passages_path = []
         for passage in final_passages:
-            if "path" in passage.keys():
-                final_passages_full.append(passage.metadata["d_id"] + passage.metadata["path"] + passage.page_content.strip())
-                final_passages_path.append(passage.metadata["d_id"] + passage.metadata["path"] + passage.page_content.strip())
-        final_passages_full = [passage.metadata["d_id"] + passage.metadata["path"] + passage.page_content.strip() for passage in final_passages]
-        final_passages_path = [passage.metadata["d_id"] + passage.metadata["path"] for passage in final_passages]
+            if "path" in passage.metadata.keys():
+                if passage.metadata["path"]:
+                    path = passage.metadata["path"]
+                else:
+                    path = ""
+                final_passages_full.append(str(passage.metadata["d_id"]) + path + passage.page_content.strip())
+                final_passages_path.append(str(passage.metadata["d_id"]) + path)
+            else:
+                final_passages_full.append(str(passage.metadata["d_id"]) + passage.page_content.strip())
+                final_passages_path.append(str(passage.metadata["d_id"]))
         return final_passages_full, final_passages_path # Combine with keyword-based retrieval
 
 
