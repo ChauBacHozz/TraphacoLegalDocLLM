@@ -313,8 +313,20 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver):
                     if i == len(path_lst) - 1:
                         node_order_type = "C_Node"
                     full_path += str(bullet_type + " " + bullet)
-                    create_node_query = f"MERGE (p:Doc_Node:{node_order_type}:Origin_Node" + "{d_id: $root_id, content: $content, bullet: $bullet, bullet_type: $bullet_type, path: $path})"
-                    tx.run(create_node_query,root_id = modified_doc_id, content = path, bullet=bullet, bullet_type = bullet_type, path = full_path)
+                    create_node_query = ("""
+                        OPTIONAL MATCH (n:Origin_Node {d_id: $d_id})
+                        WHERE n.path ENDS WITH $target_path
+                        WITH n, $d_id AS d_id, $path AS path, $content AS content, $bullet AS bullet, $bullet_type AS bullet_type
+                        CALL apoc.do.when(
+                            n IS NULL, 
+                            "CREATE (new:Doc_Node:%s:Origin_Node {d_id: $d_id, path: $path, content: $content, bullet: $bullet, bullet_type: $bullet_type}) RETURN new", 
+                            "RETURN n AS new", 
+                            {d_id: d_id, path: path, content: content, bullet: bullet, bullet_type: bullet_type, n: n}
+                        ) YIELD value
+                        RETURN value AS node;
+                    """ % node_order_type)
+                    # create_node_query = f"MERGE (p:Doc_Node:{node_order_type}:Origin_Node" + "{d_id: $root_id, content: $content, bullet: $bullet, bullet_type: $bullet_type, path: $path})"
+                    tx.run(create_node_query, d_id=modified_doc_id, target_path=path, path=full_path, content=path, bullet=bullet, bullet_type=bullet_type)
                     paths.append(full_path)
                     if node_order_type == "M_Node":
                         full_path += " > "
