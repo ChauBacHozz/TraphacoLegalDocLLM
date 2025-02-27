@@ -146,11 +146,16 @@ class RAGQwen():
         for doc in final_passages:
             key = doc.metadata["d_id"] + " | " + (doc.metadata["path"] or "")
             final_dict[key] = doc.page_content.strip()
+        # Sắp xếp theo key thứ tự alphabet
         final_dict = {k: final_dict[k] for k in sorted(final_dict)}
-        shorten_final_dict =  {}
+        shorten_final_dict = {}
         # Kiểm tra các key trong final dict, nếu có key nào mà key trước đó thuộc key đó thì sẽ lấy key trước đó (cha)
-        for i in len(1, final_dict.keys()):
-            if 
+        final_dict_keys_lst = list(final_dict.keys())
+        shorten_final_dict[final_dict_keys_lst[0]] = final_dict[final_dict_keys_lst[0]]
+        for i in range(1, len(final_dict_keys_lst)):
+            if final_dict_keys_lst[i-1] in final_dict_keys_lst[i]:
+                continue
+            shorten_final_dict[final_dict_keys_lst[i]] = final_dict[final_dict_keys_lst[i]]
         # Làm giàu thông tin retrieval data
         def get_sub_info(tx, doc_id, path):
             query_sub_info = """ MATCH (n:Doc_Node {d_id: $d_id})
@@ -161,9 +166,9 @@ class RAGQwen():
             result = list(result)
             return [Document(page_content=doc["n"]["content"], metadata={"d_id": doc["n"]["d_id"], "path": doc["n"]["path"]}) for doc in result if doc["n"]["path"] != path]
         
-        ic(final_dict)
+        
         final_results = []
-        for key, val in final_dict.items():
+        for key, val in shorten_final_dict.items():
             doc_id = key.split(" | ")[0]
             path = key.split(" | ")[1]
             final_results.append(str(doc_id + " " + path + " | " + val))
