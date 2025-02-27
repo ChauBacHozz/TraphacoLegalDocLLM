@@ -98,7 +98,7 @@ class RAGQwen():
         tokens = word_tokenize(text, format="text").split()
         return len(tokens)
 
-    def search_query_from_path(self, query: str, k =10):
+    def search_query_from_path(self, query: str, k = 5):
         """
         Perform a similarity search on the vector database.
         
@@ -141,7 +141,16 @@ class RAGQwen():
         hybrid_results = [vector_documents[i] for i in hybrid_indices]
         final_passages = hybrid_results + keyword_documents
 
-
+        # Thu gọn các passage bị trùng
+        final_dict = {}
+        for doc in final_passages:
+            key = doc.metadata["d_id"] + " | " + (doc.metadata["path"] or "")
+            final_dict[key] = doc.page_content.strip()
+        final_dict = {k: final_dict[k] for k in sorted(final_dict)}
+        shorten_final_dict =  {}
+        # Kiểm tra các key trong final dict, nếu có key nào mà key trước đó thuộc key đó thì sẽ lấy key trước đó (cha)
+        for i in len(1, final_dict.keys()):
+            if 
         # Làm giàu thông tin retrieval data
         def get_sub_info(tx, doc_id, path):
             query_sub_info = """ MATCH (n:Doc_Node {d_id: $d_id})
@@ -149,37 +158,40 @@ class RAGQwen():
                                 RETURN n ORDER BY elementId(n)
                              """
             result = tx.run(query_sub_info, d_id = doc_id, path = path)
-            return [Document(page_content=doc["n"]["content"], metadata={"d_id": doc["n"]["d_id"], "path": doc["n"]["path"]}) for doc in result]
-        ic(final_passages)
+            result = list(result)
+            return [Document(page_content=doc["n"]["content"], metadata={"d_id": doc["n"]["d_id"], "path": doc["n"]["path"]}) for doc in result if doc["n"]["path"] != path]
+        
+        ic(final_dict)
         final_results = []
-        for passage in final_passages:
-            doc_id = passage.metadata["d_id"]
-            path = passage.metadata["path"]
-            print("Path:", path)
-            final_results.append(passage)
-            if path:
+        for key, val in final_dict.items():
+            doc_id = key.split(" | ")[0]
+            path = key.split(" | ")[1]
+            final_results.append(str(doc_id + " " + path + " | " + val))
+            if len(path) > 0:
                 with self.driver.session() as session:
                     nodes_list = session.read_transaction(get_sub_info, doc_id, path)
                     for node in nodes_list:
-                        final_results.append(node)
+                        final_results.append(node.metadata["d_id"] + " " + node.metadata["path"] + " | " + node.page_content.strip())
+
+        return final_results
                         
 
 
 
-        final_passages_full = []
-        final_passages_path = []
-        for passage in final_results:
-            if "path" in passage.metadata.keys():
-                if passage.metadata["path"]:
-                    path = passage.metadata["path"]
-                else:
-                    path = ""
-                final_passages_full.append(str(passage.metadata["d_id"]) + path + passage.page_content.strip())
-                final_passages_path.append(str(passage.metadata["d_id"]) + path)
-            else:
-                final_passages_full.append(str(passage.metadata["d_id"]) + passage.page_content.strip())
-                final_passages_path.append(str(passage.metadata["d_id"]))
-        return final_passages_full, final_passages_path # Combine with keyword-based retrieval
+        # final_passages_full = []
+        # final_passages_path = []
+        # for passage in final_results:
+        #     if "path" in passage.metadata.keys():
+        #         if passage.metadata["path"]:
+        #             path = passage.metadata["path"]
+        #         else:
+        #             path = ""
+        #         final_passages_full.append(str(passage.metadata["d_id"]) + path + passage.page_content.strip())
+        #         final_passages_path.append(str(passage.metadata["d_id"]) + path)
+        #     else:
+        #         final_passages_full.append(str(passage.metadata["d_id"]) + passage.page_content.strip())
+        #         final_passages_path.append(str(passage.metadata["d_id"]))
+        # return final_passages_full, final_passages_path # Combine with keyword-based retrieval
 
 
 
@@ -205,7 +217,7 @@ class RAGQwen():
 
     
     def rag_answer(self, prompt):
-        context_list, _ = self.get_retrieval_data(prompt)
+        context_list = self.get_retrieval_data(prompt)
         n_tokens = 0
         for context in context_list:
             n_tokens += self.count_tokens_underthesea(context)
