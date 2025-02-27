@@ -19,6 +19,10 @@ from langchain.schema import Document
 from langchain.vectorstores.utils import maximal_marginal_relevance
 from neo4j import GraphDatabase
 from icecream import ic
+
+import os
+os.environ["USE_TORCH"] = "1"
+os.environ["USE_TF"] = "0"
 # PATH = 'D:/VS_Workspace/LLM/.cache'
 # os.environ['TRANSFORMERS_CACHE'] = PATH
 # os.environ['HF_HOME'] = PATH
@@ -145,22 +149,26 @@ class RAGQwen():
                                 RETURN n ORDER BY elementId(n)
                              """
             result = tx.run(query_sub_info, d_id = doc_id, path = path)
-            return [record["n"] for record in result]
-        
+            return [Document(page_content=doc["n"]["content"], metadata={"d_id": doc["n"]["d_id"], "path": doc["n"]["path"]}) for doc in result]
+        ic(final_passages)
         final_results = []
         for passage in final_passages:
             doc_id = passage.metadata["d_id"]
             path = passage.metadata["path"]
+            print("Path:", path)
+            final_results.append(passage)
             if path:
                 with self.driver.session() as session:
                     nodes_list = session.read_transaction(get_sub_info, doc_id, path)
-                    ic(nodes_list)
+                    for node in nodes_list:
+                        final_results.append(node)
+                        
 
 
 
         final_passages_full = []
         final_passages_path = []
-        for passage in final_passages:
+        for passage in final_results:
             if "path" in passage.metadata.keys():
                 if passage.metadata["path"]:
                     path = passage.metadata["path"]
@@ -195,17 +203,6 @@ class RAGQwen():
         tokenizer = AutoTokenizer.from_pretrained(model_file)
         return model, tokenizer
 
-    # # Read the vector database (FAISS)
-    # def read_vectors_db(self):
-    #     embedding_model = GPT4AllEmbeddings(model_file="models/all-MiniLM-L6-v2-f16.gguf")
-    #     db = FAISS.load_local(self.vector_db_path, embedding_model, allow_dangerous_deserialization=True)
-    #     return db
-
-    # # Perform similarity search on the vector database
-    # def search_vector_db(self,query, k=2):
-    #     db = self.read_vectors_db()
-    #     results = db.similarity_search(query, k=k)
-    #     return [result.page_content for result in results]
     
     def rag_answer(self, prompt):
         context_list, _ = self.get_retrieval_data(prompt)

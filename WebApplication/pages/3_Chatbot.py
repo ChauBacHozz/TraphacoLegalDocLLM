@@ -53,6 +53,13 @@ if "rag_model" in st.session_state:
 
         st.session_state.messages.append({"role": "assistant", "content": response})
 
+        options = ["Item 1", "Item 2", "Item 3", "Item 4"]
+
+        with st.sidebar.expander("Dropdown View"):
+            for item in options:
+                st.write(f"- {item}")
+
+
 else:
     st.write("No data found in session state.")
 

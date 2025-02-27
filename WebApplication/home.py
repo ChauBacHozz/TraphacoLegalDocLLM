@@ -2,6 +2,10 @@ import streamlit as st
 from sentence_transformers import SentenceTransformer
 from backend.RAGQwenModel import RAGQwen
 import os
+
+import os
+os.environ["USE_TORCH"] = "1"
+os.environ["USE_TF"] = "0"
 # PATH = 'D:/VS_Workspace/LLM/.cache'
 # os.environ['TRANSFORMERS_CACHE'] = PATH
 # os.environ['HF_HOME'] = PATH
