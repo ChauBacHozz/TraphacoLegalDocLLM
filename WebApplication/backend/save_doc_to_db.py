@@ -18,6 +18,8 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
         query = "MATCH (n) RETURN count(n) AS node_count"
         result = tx.run(query)
         return result.single()["node_count"]
+    
+
     with driver.session() as session:
         node_count = session.execute_read(count_nodes)
     for i, mtdata in enumerate(new_metadata):
@@ -70,6 +72,20 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
             #               p.bullet_type = $bullet_type,
             #               p.content = $content""", 
             #               bullet = m_bullet, bullet_type = m_bullet_type, content = middle_node, d_id = d_id, path = full_path)
+            # create_node_query_check = """
+            #     OPTIONAL MATCH (n:Origin_Node {d_id: $d_id})
+            #     WHERE $target_path ENDS WITH n.path 
+            #     RETURN CASE 
+            #         WHEN n IS NULL THEN "Not Found" 
+            #         ELSE "Found" 
+            #     END AS status, n;
+            # """
+
+            # result = tx.run(create_node_query_check, d_id=d_id, target_path=full_path)
+            # record = result.single()
+
+            # if record["status"] == "Not Found":
+            #     print(f"No Origin_Node found with the given d_id and {full_path} conditions.")
 
             create_node_query = ("""
                 OPTIONAL MATCH (n:Origin_Node {d_id: $d_id})
@@ -78,7 +94,7 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
                 CALL apoc.do.when(
                     n IS NULL, 
                     "CREATE (new:Doc_Node:M_Node:Origin_Node {d_id: $d_id, path: $path, content: $content, bullet: $bullet, bullet_type: $bullet_type}) RETURN new", 
-                    "RETURN n AS new", 
+                    "SET n.content = $content RETURN n AS new", 
                     {d_id: d_id, path: path, content: content, bullet: bullet, bullet_type: bullet_type, n: n}
                 ) YIELD value
                 RETURN value AS node;
