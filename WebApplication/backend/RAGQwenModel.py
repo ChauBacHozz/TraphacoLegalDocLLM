@@ -159,29 +159,28 @@ class RAGQwen():
             shorten_final_dict[final_dict_keys_lst[i]] = final_dict[final_dict_keys_lst[i]]
         # Làm giàu thông tin retrieval data
         def get_sub_info(tx, doc_id, path):
-            # query_sub_info = """ MATCH (n:Doc_Node {d_id: $d_id})
-            #                     WHERE n.path STARTS WITH $path 
-            #                     RETURN n ORDER BY elementId(n)
-            #                  """
-            query_sub_info = """
-            MATCH (n:Doc_Node {d_id: $d_id})
-            WHERE n.path STARTS WITH $path 
-            OPTIONAL MATCH (modified_node)-[:MODIFIED]->(n)  
-            RETURN n, COLLECT(DISTINCT modified_node) AS modified_nodes
-            ORDER BY elementId(n)
-            """
+            query_sub_info = """ MATCH (n:Doc_Node {d_id: $d_id})
+                                WHERE n.path STARTS WITH $path 
+                                RETURN n ORDER BY elementId(n)
+                             """
+            # query_sub_info = """
+            # MATCH (n:Doc_Node {d_id: $d_id})
+            # WHERE n.path STARTS WITH $path 
+            # OPTIONAL MATCH (modified_node)-[:MODIFIED]->(n)  
+            # RETURN n, COLLECT(DISTINCT modified_node) AS modified_nodes
+            # ORDER BY elementId(n)
+            # """
             result = tx.run(query_sub_info, d_id = doc_id, path = path)
             result = list(result)
-            # return [Document(page_content=doc["n"]["content"], metadata={"d_id": doc["n"]["d_id"], "path": doc["n"]["path"]}) for doc in result if doc["n"]["path"] != path]
-            records = []
-            for record in result:
-                node = dict(record["n"])  # Convert node properties to dict
-                modified_nodes = [dict(r) for r in record["modified_nodes"]]  # Convert modified nodes
-                records.append({
-                    "node": node,
-                    "modified_nodes": modified_nodes
-                })
-            return records
+            return [Document(page_content=doc["n"]["content"], metadata={"d_id": doc["n"]["d_id"], "path": doc["n"]["path"]}) for doc in result if doc["n"]["path"] != path]
+            # records = []
+            # for record in result:
+            #     node = dict(record["n"])  # Convert node properties to dict
+            #     modified_nodes = [dict(r) for r in record["modified_nodes"]]  # Convert modified nodes
+            #     records.append({
+            #         "node": node,
+            #         "modified_nodes": modified_nodes
+            #     })
         
         
         final_results = []
