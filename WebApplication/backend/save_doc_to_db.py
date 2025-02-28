@@ -280,6 +280,8 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver, doc_type = 1):
         black_lst_path = None
         if modified_purpose:
             metadata["modified_purpose"] = max(modified_purpose, key=modified_purpose.get)
+        else: 
+            metadata["modified_purpose"] = "điều chỉnh"
         pattern = r'\d{2,3}/\d{4}/(?:NĐ-CP|TT-CP|TT-BYT|QH\d{2})'
         if doc_type == 1:
             modified_doc_id = re.search(pattern, full_path)
@@ -418,7 +420,7 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver, doc_type = 1):
 
                     # Connect last middle node to modified node
                     tx.run("""
-                        MATCH (a:Doc_Node:Origin_Node {d_id: $root_id, path: $modified_path}), (b:Doc_Node:C_Node:Modified_Node {d_id: $id})
+                        MATCH (a:Doc_Node:Origin_Node {d_id: $root_id, path: $modified_path}), (b:Doc_Node:C_Node:Modified_Node {id: $id})
                         MERGE (b)-[:MODIFIED]->(a)
                     """, root_id = modified_doc_id, id = c_node_id, modified_path = full_path)
                     if full_path != p:
@@ -431,7 +433,7 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver, doc_type = 1):
 
         else:
             tx.run("""
-                MATCH (a:Doc_Node:R_Node:Origin_Node {d_id: $root_id}), (b:Doc_Node:C_Node:Modified_Node {d_id: $id})
+                MATCH (a:Doc_Node:R_Node:Origin_Node {d_id: $root_id}), (b:Doc_Node:C_Node:Modified_Node {id: $id})
                 MERGE (b)-[:MODIFIED]->(a)
             """, root_id = modified_doc_id, id = c_node_id)
 
@@ -463,7 +465,7 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver, doc_type = 1):
                 c_bullet_type = "điểm"
             else:
                 c_bullet_type = "khoản"
-        tx.run("MERGE (p:Doc_Node:C_Node:Modified_Node {bullet: $bullet, bullet_type: $bullet_type, content: $content, d_id: $id})", bullet = c_bullet, bullet_type = c_bullet_type, content = content, id = id)
+        tx.run("MERGE (p:Doc_Node:C_Node:Modified_Node {bullet: $bullet, bullet_type: $bullet_type, content: $content, d_id: $d_id, id: $id, modified_purpose: $modified_purpose})", bullet = c_bullet, bullet_type = c_bullet_type, content = content, id = id, d_id = root_id, modified_purpose = modified_purpose)
 
         if modified_doc_id:
             create_virtual_origin_nodes(tx, c_node_id=id, modified_paths=modified_paths, modified_doc_id=modified_doc_id)
@@ -487,7 +489,7 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver, doc_type = 1):
                         m_bullet_type = "điểm"
                     else:
                         m_bullet_type = "khoản"
-            tx.run("MERGE (p:Doc_Node:M_Node:Modified_Node {bullet: $bullet, bullet_type: $bullet_type, content: $content, d_id: $id})", bullet = m_bullet, bullet_type = m_bullet_type, content = middle_node, id = root_id)
+            tx.run("MERGE (p:Doc_Node:M_Node:Modified_Node {bullet: $bullet, bullet_type: $bullet_type, content: $content, d_id: $d_id})", bullet = m_bullet, bullet_type = m_bullet_type, content = middle_node, d_id = root_id)
         # Connect root node to first middle node
         tx.run("""
             MATCH (a:Doc_Node:R_Node:Modified_Node {content: $p_content, d_id: $root_id}), (b:Doc_Node:M_Node:Modified_Node {content: $m_content, d_id: $id})
@@ -495,9 +497,9 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver, doc_type = 1):
         """, p_content=root_node_content, m_content=middle_node_names[0], root_id = root_id, id = root_id)
         # Connect last middle node to content node
         tx.run("""
-            MATCH (a:Doc_Node:M_Node:Modified_Node {content: $m_content, d_id: $root_id}), (b:Doc_Node:C_Node:Modified_Node {content: $c_content, d_id: $id})
+            MATCH (a:Doc_Node:M_Node:Modified_Node {content: $m_content, d_id: $root_id}), (b:Doc_Node:C_Node:Modified_Node {content: $c_content, d_id: $root_id})
             MERGE (a)-[:CONTAIN]->(b)
-        """, m_content=middle_node_names[-1], c_content=content, root_id = root_id, id = id)
+        """, m_content=middle_node_names[-1], c_content=content, root_id = root_id)
         # Connect middle nodes
         for i in range(len(middle_node_names) - 1):
             tx.run("""
