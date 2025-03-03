@@ -94,7 +94,7 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
                 CALL apoc.do.when(
                     n IS NULL, 
                     "CREATE (new:Doc_Node:M_Node:Origin_Node {d_id: $d_id, path: $path, content: $content, bullet: $bullet, bullet_type: $bullet_type}) RETURN new", 
-                    "SET n.content = $content RETURN n AS new", 
+                    "SET n.content = $content, n.path = $path RETURN n AS new", 
                     {d_id: d_id, path: path, content: content, bullet: bullet, bullet_type: bullet_type, n: n}
                 ) YIELD value
                 RETURN value AS node;
