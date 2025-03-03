@@ -145,7 +145,7 @@ class RAGQwen():
         final_dict = {}
         for doc in final_passages:
             key = doc.metadata["d_id"] + " | " + (doc.metadata["path"] or "")
-            final_dict[key] = doc.page_content.strip()
+            final_dict[key] = doc.page_content
         # Sắp xếp theo key thứ tự alphabet
         final_dict = {k: final_dict[k] for k in sorted(final_dict)}
         ic(final_dict)
@@ -167,10 +167,14 @@ class RAGQwen():
             result = list(result)
             return [Document(page_content=doc["n"]["content"], metadata={"d_id": doc["n"]["d_id"], "path": doc["n"]["path"]}) for doc in result if doc["n"]["path"] != path]
         
-        def get_modified_nodes(tx, doc_id, path):
+        def get_modified_nodes(tx, doc_id, content):
             query = """ 
-            MATCH (modifier:Modified_Node)-[:MODIFIED]->(x {doc_id: $doc_id, path: $path})
+            MATCH (modifier:Modified_Node)-[:MODIFIED]->(x:Origin_Node {doc_id: $doc_id, content: $content})
+            RETURN modifier
             """
+            result = tx.run(query, doc_id = doc_id, content = content)
+            return [record["modifier"] for record in result] or []  # Ensure it returns an empty list
+
 
 
         final_results = []
@@ -179,12 +183,17 @@ class RAGQwen():
             doc_id = key.split(" | ")[0]
             path = key.split(" | ")[1]
             final_results.append(str(doc_id + " " + path + " | " + val))
+            with self.driver.session() as session:
+                modified_nodes = session.read_transaction(get_modified_nodes, doc_id, val)
+                print("MODIFIED NODESSSS:",modified_nodes)
+            #     final_results.append(modified_nodes)
             if len(path) > 0:
                 # Get sub nodes
                 with self.driver.session() as session:
                     nodes_list = session.read_transaction(get_sub_nodes, doc_id, path)
                     for node in nodes_list:
-                        ic(node)
+                        modified_nodes = session.read_transaction(get_modified_nodes, node.metadata["d_id"], node.page_content)
+                        # final_results.append(modified_nodes)
                     # for node in nodes_list:
                     #     final_results.append(node.metadata["d_id"] + " " + node.metadata["path"] + " | " + node.page_content.strip())
 
