@@ -66,27 +66,6 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
                     else:
                         m_bullet_type = "khoản"
             full_path = full_path + str(m_bullet_type + " " + m_bullet)
-            # Create path property
-            # tx.run("""MATCH (p:Doc_Node:M_Node:Origin_Node {d_id: $d_id})
-            #           SET p.bullet = $bullet, 
-            #               p.bullet_type = $bullet_type,
-            #               p.content = $content""", 
-            #               bullet = m_bullet, bullet_type = m_bullet_type, content = middle_node, d_id = d_id, path = full_path)
-            # create_node_query_check = """
-            #     OPTIONAL MATCH (n:Origin_Node {d_id: $d_id})
-            #     WHERE $target_path ENDS WITH n.path 
-            #     RETURN CASE 
-            #         WHEN n IS NULL THEN "Not Found" 
-            #         ELSE "Found" 
-            #     END AS status, n;
-            # """
-
-            # result = tx.run(create_node_query_check, d_id=d_id, target_path=full_path)
-            # record = result.single()
-
-            # if record["status"] == "Not Found":
-            #     print(f"No Origin_Node found with the given d_id and {full_path} conditions.")
-
             create_node_query = ("""
                 OPTIONAL MATCH (n:Origin_Node {d_id: $d_id})
                 WHERE $target_path ENDS WITH n.path 
@@ -97,7 +76,10 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
                     "SET n.content = $content, n.path = $path RETURN n AS new", 
                     {d_id: d_id, path: path, content: content, bullet: bullet, bullet_type: bullet_type, n: n}
                 ) YIELD value
-                RETURN value AS node;
+                WITH value AS node
+                MATCH (node)-[r]-(other) WHERE type(r) CONTAINS 'CONTAIN'
+                DELETE r
+                RETURN node;
             """)
             m_node = tx.run(create_node_query, d_id = d_id, path = full_path, target_path = full_path, content = middle_node, bullet = m_bullet, bullet_type = m_bullet_type)
             m_node = list(m_node)
@@ -138,7 +120,11 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
                 "RETURN n AS new", 
                 {d_id: d_id, c_id: c_id, path: path, content: content, bullet: bullet, bullet_type: bullet_type, n: n}
             ) YIELD value
-            RETURN value AS node;
+                             
+            WITH value AS node
+            MATCH (node)-[r]-(other) WHERE type(r) CONTAINS 'CONTAIN'
+            DELETE r
+            RETURN node;
         """)
         c_node = tx.run(create_node_query, d_id = d_id, c_id = c_id, path = full_path, target_path = full_path, content = content, bullet = c_bullet, bullet_type = c_bullet_type)
         c_node = list(c_node)
@@ -146,7 +132,6 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
             # if "node" in record and record["node"] is not None:
             nodes.append(record["node"]["new"].element_id)
         # Connect root node to first middle node
-        print(nodes[0])
         tx.run("""
             MATCH (a:Doc_Node:R_Node:Origin_Node {d_id: $d_id}), (b:Doc_Node:Origin_Node)
             WHERE elementId(b) = $first_middle_node_id
