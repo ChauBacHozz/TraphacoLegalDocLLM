@@ -148,7 +148,7 @@ class RAGQwen():
             final_dict[key] = doc.page_content
         # Sắp xếp theo key thứ tự alphabet
         final_dict = {k: final_dict[k] for k in sorted(final_dict)}
-        ic(final_dict)
+        # ic(final_dict)
         shorten_final_dict = {}
         # Kiểm tra các key trong final dict, nếu có key nào mà key trước đó thuộc key đó thì sẽ lấy key trước đó (cha)
         final_dict_keys_lst = list(final_dict.keys())
@@ -172,10 +172,10 @@ class RAGQwen():
             MATCH (modifier:Modified_Node)-[:MODIFIED]->(x:Origin_Node {d_id: $d_id, content: $content})
             RETURN modifier
             """
-            result = tx.run(query, d_id = d_id, content = content)
+            result = tx.run(query, d_id = doc_id, content = content)
             return [record["modifier"] for record in result] or []  # Ensure it returns an empty list
 
-
+        # Hồ sơ đề nghị điều chỉnh nội dung Chứng chỉ hành nghề dược gồm những gì?
 
         final_results = []
         # ic(shorten_final_dict)
@@ -185,15 +185,18 @@ class RAGQwen():
             final_results.append(str(doc_id + " " + path + " | " + val))
             with self.driver.session() as session:
                 modified_nodes = session.read_transaction(get_modified_nodes, doc_id, val)
-                print("MODIFIED NODESSSS:",modified_nodes)
+                for modified_node in modified_nodes:
+                    final_results.append(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"] + " " + modified_node["content"])
             #     final_results.append(modified_nodes)
             if len(path) > 0:
                 # Get sub nodes
                 with self.driver.session() as session:
                     nodes_list = session.read_transaction(get_sub_nodes, doc_id, path)
                     for node in nodes_list:
+                        final_results.append(node.metadata["d_id"] + " " + node.metadata["path"] + " | " + node.page_content.strip())
                         modified_nodes = session.read_transaction(get_modified_nodes, node.metadata["d_id"], node.page_content)
-                        print("MODIFIED NODESSSS:",modified_nodes)
+                        for modified_node in modified_nodes:
+                            final_results.append(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"] + " " + modified_node["content"])
 
                         # final_results.append(modified_nodes)
                     # for node in nodes_list:
