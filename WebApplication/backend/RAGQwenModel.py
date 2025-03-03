@@ -169,10 +169,10 @@ class RAGQwen():
         
         def get_modified_nodes(tx, doc_id, content):
             query = """ 
-            MATCH (modifier:Modified_Node)-[:MODIFIED]->(x:Origin_Node {doc_id: $doc_id, content: $content})
+            MATCH (modifier:Modified_Node)-[:MODIFIED]->(x:Origin_Node {d_id: $d_id, content: $content})
             RETURN modifier
             """
-            result = tx.run(query, doc_id = doc_id, content = content)
+            result = tx.run(query, d_id = d_id, content = content)
             return [record["modifier"] for record in result] or []  # Ensure it returns an empty list
 
 
@@ -193,6 +193,8 @@ class RAGQwen():
                     nodes_list = session.read_transaction(get_sub_nodes, doc_id, path)
                     for node in nodes_list:
                         modified_nodes = session.read_transaction(get_modified_nodes, node.metadata["d_id"], node.page_content)
+                        print("MODIFIED NODESSSS:",modified_nodes)
+
                         # final_results.append(modified_nodes)
                     # for node in nodes_list:
                     #     final_results.append(node.metadata["d_id"] + " " + node.metadata["path"] + " | " + node.page_content.strip())
