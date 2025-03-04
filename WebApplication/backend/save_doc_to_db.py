@@ -76,13 +76,23 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
                     "SET n.content = $content, n.path = $path RETURN n AS new", 
                     {d_id: d_id, path: path, content: content, bullet: bullet, bullet_type: bullet_type, n: n}
                 ) YIELD value
-                WITH value AS node
-                MATCH (node)-[r]-(other) WHERE type(r) CONTAINS 'CONTAIN'
-                DELETE r
-                RETURN node;
+                RETURN value AS node;
             """)
             m_node = tx.run(create_node_query, d_id = d_id, path = full_path, target_path = full_path, content = middle_node, bullet = m_bullet, bullet_type = m_bullet_type)
             m_node = list(m_node)
+            # for node_record in m_node:
+            #     # Get the node from the record
+            #     node = node_record["node"]["new"]
+                
+            #     # Query to find and delete relationships containing "CONTAIN" in their type
+            #     delete_contains_query = """
+            #     MATCH (n)-[r]-()
+            #     WHERE id(n) = $node_id AND type(r) CONTAINS 'CONTAIN'
+            #     DELETE r
+            #     """
+                
+            #     # Execute the query
+            #     tx.run(delete_contains_query, node_id=node.id)
             full_path += " > "
             for record in m_node:
                 # if "node" in record and record["node"] is not None:
@@ -102,13 +112,6 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
             else:
                 c_bullet_type = ""
         full_path = full_path + str(c_bullet_type + " " + c_bullet)
-        # tx.run("""MERGE (p:Doc_Node:C_Node:Origin_Node {d_id: $d_id, path: $path})
-        #        SET p.bullet = $bullet, 
-        #            p.bullet_type = $bullet_type, 
-        #            p.content = $content, 
-        #            p.d_id = $d_id, 
-        #            p.c_id = $c_id""", 
-        #            bullet = c_bullet, bullet_type = c_bullet_type, content = content, d_id = d_id, c_id = c_id, path = full_path)
 
         create_node_query = ("""
             OPTIONAL MATCH (n:Origin_Node {d_id: $d_id})
@@ -117,17 +120,27 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
             CALL apoc.do.when(
                 n IS NULL, 
                 "CREATE (new:Doc_Node:C_Node:Origin_Node {d_id: $d_id, c_id: $c_id, path: $path, content: $content, bullet: $bullet, bullet_type: $bullet_type}) RETURN new", 
-                "RETURN n AS new", 
+                "SET n.content = $content, n.path = $path RETURN n AS new", 
                 {d_id: d_id, c_id: c_id, path: path, content: content, bullet: bullet, bullet_type: bullet_type, n: n}
             ) YIELD value
-                             
-            WITH value AS node
-            MATCH (node)-[r]-(other) WHERE type(r) CONTAINS 'CONTAIN'
-            DELETE r
-            RETURN node;
+            RETURN value AS node;
         """)
         c_node = tx.run(create_node_query, d_id = d_id, c_id = c_id, path = full_path, target_path = full_path, content = content, bullet = c_bullet, bullet_type = c_bullet_type)
         c_node = list(c_node)
+        # Assuming you already have the c_node list from your previous query
+        # for node_record in c_node:
+        #     # Get the node from the record
+        #     node = node_record["node"]["new"]
+            
+        #     # Query to find and delete relationships containing "CONTAIN" in their type
+        #     delete_contains_query = """
+        #     MATCH (n)-[r]-()
+        #     WHERE id(n) = $node_id AND type(r) CONTAINS 'CONTAIN'
+        #     DELETE r
+        #     """
+            
+        #     # Execute the query
+        #     tx.run(delete_contains_query, node_id=node.id)
         for record in c_node:
             # if "node" in record and record["node"] is not None:
             nodes.append(record["node"]["new"].element_id)
@@ -137,29 +150,23 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
             WHERE elementId(b) = $first_middle_node_id
             MERGE (a)-[:CONTAIN]->(b)
             """, d_id = d_id, first_middle_node_id = nodes[0])
-        # # Connect last middle node to content node
-        # tx.run("""
-        #     MATCH (a:Doc_Node:M_Node:Origin_Node {content: $m_content, d_id: $d_id}), (b:Doc_Node:C_Node:Origin_Node {content: $c_content, c_id: $c_id})
-        #     MERGE (a)-[:CONTAIN]->(b)
-        # """, m_content=middle_node_names[-1], c_content=content, d_id = d_id, c_id = c_id)
-        # Connect middle nodes
+
         for i in range(len(nodes) - 1):
             tx.run("""
                 MATCH (a:Doc_Node:Origin_Node), (b:Doc_Node:Origin_Node)
                 WHERE elementId(a) = $firstEId AND elementId(b) = $secondEId
                 MERGE (a)-[:CONTAIN]->(b)
             """, firstEId=nodes[i], secondEId=nodes[i + 1])
-
-        # Create nodes
-        # for node in nodes:
-        #     tx.run("MERGE (n:Node {name: $name})", name=node)
-
-        # # Create relationships
-        # for i in range(len(nodes) - 1):
-        #     tx.run("""
-        #         MATCH (a:Node {name: $node1}), (b:Node {name: $node2})
-        #         MERGE (a)-[:NEXT]->(b)
-        #     """, node1=nodes[i], node2=nodes[i + 1])
+        
+        check_multiple_paths_query = """
+            MATCH (a)-[direct:CONTAIN]->(e)
+            WITH a, e, direct
+            MATCH path = (a)-[*2..]->(e)
+            WITH a, e, direct, count(path) AS indirect_path_count
+            WHERE indirect_path_count >= 1
+            DELETE direct
+        """
+        tx.run(check_multiple_paths_query)
     for mtdata in new_metadata:
         # paths = mtdata["path"].split(">")
         with driver.session() as session:
