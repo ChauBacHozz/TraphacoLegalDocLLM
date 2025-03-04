@@ -57,12 +57,13 @@ class RAGQwen():
         - Chỉ sử dụng các thông tin có trong ngữ cảnh được cung cấp.
         - Chỉ cần từ chối trả lời và không suy luận gì thêm nếu ngữ cảnh không có câu trả lời.
         - Nếu nhiều nội dung được lấy từ cùng 1 khoản trong tài liệu đã cho, trả về toàn bộ nội dung trong khoản đó một cách chính xác nhất, không thực hiện tóm tắt lại.
+        - Giữ nguyên đề mục của ngữ cảnh để người đọc nắm được thông tin một cách chính xác nhất
         Hãy trả lời câu hỏi dựa trên ngữ cảnh:
         ### Ngữ cảnh :
         {context}
 
         ### Câu hỏi :
-        {question}
+        {question} có bị sửa đổi, bãi bỏ, thêm không? nếu có thì chỉ rõ văn bản nào, đề mục cụ thể?
 
         ### Trả lời :'''
 
@@ -186,7 +187,7 @@ class RAGQwen():
             with self.driver.session() as session:
                 modified_nodes = session.read_transaction(get_modified_nodes, doc_id, val)
                 for modified_node in modified_nodes:
-                    final_results.append(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"] + " " + modified_node["content"])
+                    final_results.append(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"] + "văn bản" + doc_id + " " + modified_node["content"])
             #     final_results.append(modified_nodes)
             if len(path) > 0:
                 # Get sub nodes
@@ -196,7 +197,7 @@ class RAGQwen():
                         final_results.append(node.metadata["d_id"] + " " + node.metadata["path"] + " | " + node.page_content.strip())
                         modified_nodes = session.read_transaction(get_modified_nodes, node.metadata["d_id"], node.page_content)
                         for modified_node in modified_nodes:
-                            final_results.append(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"] + " " + modified_node["content"])
+                            final_results.append(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"]  + "văn bản" + doc_id  +  " " + modified_node["content"])
 
                         # final_results.append(modified_nodes)
                     # for node in nodes_list:
