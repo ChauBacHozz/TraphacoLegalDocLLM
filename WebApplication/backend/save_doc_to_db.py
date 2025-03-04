@@ -350,6 +350,7 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver, doc_type = 1):
             # Create middle nodes if modified_paths exist
             for p in modified_paths:
                 # Check if target origin nodes exist or not
+                # CẦN SỬA LẠI ĐOẠN NÀY
                 create_node_query = ("""
                     OPTIONAL MATCH (n:Origin_Node {d_id: $d_id})
                     WHERE n.path ENDS WITH $target_path
@@ -360,6 +361,7 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver, doc_type = 1):
                 len_res_lst = len(res_lst)
                 if len_res_lst > 0 and res_lst[0]["n"] is not None: 
                     # If exist connect target node to modìied node
+                    print("Exist origin note with path:", {res_lst[0]["n"]})
                     connect_node_query = ("""
                         MATCH (a), (b)
                         WHERE ID(a) = $origin_id AND b.d_id = $c_node_id
