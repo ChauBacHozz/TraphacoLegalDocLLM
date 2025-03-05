@@ -50,9 +50,7 @@ class RAGQwen():
         # Load the FAISS vector database with the embedding model
         # self.db = FAISS.load_local(folder_path=vector_db_path, embeddings=self.embedding_model, allow_dangerous_deserialization = True)
 
-
-        self.system_prompt = "Bạn là một trợ lí Tiếng Việt nhiệt tình và trung thực. Hãy luôn trả lời một cách hữu ích nhất có thể."
-        self.template = '''Hãy tuân thủ nghiêm ngặt các nguyên tắc sau:
+        self.template = '''Bạn là một trợ lí Tiếng Việt nhiệt tình và trung thực. Hãy luôn trả lời một cách hữu ích nhất có thể. Hãy tuân thủ nghiêm ngặt các nguyên tắc sau:
 
         - Chỉ trả lời dựa trên thông tin có trong ngữ cảnh được cung cấp ({context}), không sử dụng bất kỳ thông tin nào ngoài ngữ cảnh.
         - Phải nêu rõ câu trả lời được lấy từ nội dung của văn bản nào, đề mục như thế nào.
@@ -262,17 +260,15 @@ class RAGQwen():
         context = "\n".join(context_list)
         # print("\n\n\nCONTEXT:", context)
         # print("\n\n")
-        conversation = [{"role": "system", "content": self.system_prompt }]
-        conversation.append({"role": "user", "content": self.template.format(context = context, question = prompt)})
+
+        input_text = self.template.format(context = context, question = prompt)
+        input_ids = self.tokenizer(input_text, return_tensors="pt")
+        if torch.cuda.is_available():
+            input_ids = input_ids.to("cuda") 
         with torch.inference_mode():
-            text = self.tokenizer.apply_chat_template(
-                conversation,
-                tokenize=False,
-                add_generation_prompt=True)
-            model_inputs = self.tokenizer(text,return_tensors="pt").to(self.model.device)
 
             generated_ids = self.model.generate(
-                model_inputs.input_ids,
+                **input_ids,
                 max_new_tokens=2048,
                 temperature = 0.1,
                 top_p=0.95,
