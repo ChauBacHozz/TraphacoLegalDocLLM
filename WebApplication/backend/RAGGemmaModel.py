@@ -32,7 +32,7 @@ os.environ["USE_TF"] = "0"
 class RAGQwen():
     def __init__(self, vector_db_path = "vectorstores/db_faiss", 
                  embedding_model = None,
-                 model_file = "AITeamVN/Vi-Qwen2-7B-RAG",
+                 model_file = "ricepaper/vi-gemma-2b-RAG",
                  ):
         
         self.vector_db_path = vector_db_path
@@ -52,21 +52,25 @@ class RAGQwen():
 
 
         self.system_prompt = "Bạn là một trợ lí Tiếng Việt nhiệt tình và trung thực. Hãy luôn trả lời một cách hữu ích nhất có thể."
-        self.template = '''Chú ý các yêu cầu sau:
-        - Câu trả lời phải chính xác và đầy đủ nếu ngữ cảnh có câu trả lời. 
-        - Chỉ sử dụng các thông tin có trong ngữ cảnh được cung cấp.
-        - Chỉ cần từ chối trả lời và không suy luận gì thêm nếu ngữ cảnh không có câu trả lời.
-        - Nêu rõ từng đề mục trả lời được lấy từ văn bản nào trong ngữ cảnh
-        - Nếu ngữ cảnh chứa câu trả lời, hãy cung cấp câu trả lời chính xác, đầy đủ, bao gồm toàn bộ nội dung liên quan từ ngữ cảnh (văn bản, đề mục, và các chi tiết cụ thể), không bỏ sót thông tin quan trọng.
+        self.template = '''Hãy tuân thủ nghiêm ngặt các nguyên tắc sau:
 
-        Hãy trả lời câu hỏi dựa trên ngữ cảnh:
+        - Chỉ trả lời dựa trên thông tin có trong ngữ cảnh được cung cấp ({context}), không sử dụng bất kỳ thông tin nào ngoài ngữ cảnh.
+        - Phải nêu rõ câu trả lời được lấy từ nội dung của văn bản nào, đề mục như thế nào.
+        - Nếu ngữ cảnh chứa câu trả lời, hãy cung cấp câu trả lời chính xác, đầy đủ, bao gồm toàn bộ nội dung liên quan từ ngữ cảnh (văn bản, đề mục, và các chi tiết cụ thể), không bỏ sót thông tin quan trọng.
+        - Trích dẫn đầy đủ và chính xác các văn bản, điều khoản, khoản, hoặc đề mục được nêu trong ngữ cảnh để tránh thiếu sót.
+        - Nếu ngữ cảnh không chứa câu trả lời, chỉ từ chối trả lời bằng cách nêu rõ không có thông tin, không suy luận hay bổ sung thêm.
+
+        Hãy trả lời câu hỏi sau dựa trên ngữ cảnh:
+
         ### Ngữ cảnh :
-        {context} Thuộc văn bản nào, đề mục cụ thể là gì? Có bị sửa đổi, bãi bỏ, thêm không?
+        {context}
 
         ### Câu hỏi :
-        {question}
+        {question}? Các nội dung này có bị sửa đổi, bãi bỏ, thêm không? Nếu có thì chỉ rõ văn bản nào, đề mục cụ thể?
 
-        ### Trả lời :'''
+        ### Trả lời :
+        - Nếu có thông tin: Dựa trên ngữ cảnh được cung cấp, {question} [đã bị sửa đổi/bãi bỏ/được thêm] bởi [văn bản cụ thể], tại [đề mục cụ thể], với nội dung chi tiết như sau: [trích dẫn đầy đủ nội dung liên quan từ ngữ cảnh].
+        - Nếu không có thông tin: Dựa trên ngữ cảnh được cung cấp, không có thông tin về việc {question} bị sửa đổi, bãi bỏ hay được thêm.'''
 
         # Khởi tạo mô hình LLM và tokenizer
         self.model, self.tokenizer = self.load_huggingface_model(self.model_file)
@@ -100,7 +104,7 @@ class RAGQwen():
         tokens = word_tokenize(text, format="text").split()
         return len(tokens)
 
-    def search_query_from_path(self, query: str, k = 7):
+    def search_query_from_path(self, query: str, k = 5):
         """
         Perform a similarity search on the vector database.
         
