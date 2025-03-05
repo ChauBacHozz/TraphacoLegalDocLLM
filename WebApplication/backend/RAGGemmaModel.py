@@ -274,8 +274,9 @@ class RAGQwen():
                 top_p=0.95,
                 top_k=40,
             )
+            
             generated_ids = [
-                output_ids[len(input_ids):] for input_ids, output_ids in zip(model_inputs.input_ids, generated_ids)
+                output_ids[len(input_ids):] for input_ids, output_ids in zip(**input_ids, generated_ids)
             ]
             response = self.tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
             return response
