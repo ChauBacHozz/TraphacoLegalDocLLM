@@ -63,7 +63,7 @@ class RAGQwen():
         {context} 
 
         ### Câu hỏi :
-        {question} Nêu rõ về nội dung bị bãi bỏ, chỉnh sửa, sổ sung.
+        Xử dụng thông tin từ ngữ cảnh để trả lời câu hỏi sau (nêu rõ về các nội dung bị bãi bỏ, chỉnh sửa, sổ sung):{question} 
 
         ### Trả lời :'''
 
