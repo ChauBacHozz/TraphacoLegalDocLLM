@@ -56,14 +56,15 @@ class RAGQwen():
         - Câu trả lời phải chính xác và đầy đủ nếu ngữ cảnh có câu trả lời. 
         - Chỉ sử dụng các thông tin có trong ngữ cảnh được cung cấp.
         - Chỉ cần từ chối trả lời và không suy luận gì thêm nếu ngữ cảnh không có câu trả lời.
-        - Trả lời câu hỏi một cách chi tiết và đầy đủ nhất có thể
+        - Nếu nhiều nội dung được lấy từ cùng 1 khoản trong tài liệu đã cho, trả về toàn bộ nội dung trong khoản đó một cách chính xác nhất, không thực hiện tóm tắt lại.
+        - Giữ nguyên đề mục của ngữ cảnh để người đọc nắm được thông tin một cách chính xác nhất
 
         Hãy trả lời câu hỏi dựa trên ngữ cảnh:
         ### Ngữ cảnh :
         {context} 
 
         ### Câu hỏi :
-        Xử dụng thông tin từ ngữ cảnh để trả lời câu hỏi sau (nêu rõ về các nội dung bị bãi bỏ, chỉnh sửa, sổ sung):{question} 
+        Sử dụng thông tin từ ngữ cảnh để trả lời câu hỏi sau:{question} có bị sửa đổi, bãi bỏ, bổ sung không? nếu có thì chỉ rõ văn bản nào, đề mục cụ thể?
 
         ### Trả lời :'''
 
@@ -191,7 +192,7 @@ class RAGQwen():
                 modified_nodes = session.read_transaction(get_modified_nodes, doc_id, val)
                 for modified_node in modified_nodes:
                     modified_results.add(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"] + " nội dung thuộc văn bản " + doc_id + " như sau " + modified_node["content"])
-                    origin_results[-1] = origin_results[-1] + " | được " + modified_node["modified_purpose"] + " ở " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " văn bản " + modified_node["d_id"]
+                    origin_results[-1] = origin_results[-1] + " **được " + modified_node["modified_purpose"] + " ở " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " văn bản " + modified_node["d_id"] + " .**"
             #     final_results.append(modified_nodes)
             if len(path) > 0:
                 # Get sub nodes
@@ -202,7 +203,7 @@ class RAGQwen():
                         modified_nodes = session.read_transaction(get_modified_nodes, node.metadata["d_id"], node.page_content)
                         for modified_node in modified_nodes:
                             modified_results.add(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"]  + " nội dung thuộc văn bản " + doc_id  +  " như sau " + modified_node["content"])
-                            origin_results[-1] = origin_results[-1] + " | được " + modified_node["modified_purpose"] + " ở " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " văn bản " + modified_node["d_id"]
+                            origin_results[-1] = origin_results[-1] + " **được " + modified_node["modified_purpose"] + " ở " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " văn bản " + modified_node["d_id"] + " .**"
                         # final_results.append(modified_nodes)
                     # for node in nodes_list:
                     #     final_results.append(node.metadata["d_id"] + " " + node.metadata["path"] + " | " + node.page_content.strip())
