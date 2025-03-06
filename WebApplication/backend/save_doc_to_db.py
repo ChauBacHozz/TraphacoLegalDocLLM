@@ -360,7 +360,7 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver, doc_type = 1):
                 len_res_lst = len(res_lst)
                 if len_res_lst > 0 and res_lst[0]["n"] is not None: 
                     # If exist connect target node to modìied node
-                    # print("Exist origin node with path:", {res_lst[0]["n"]["path"]})
+                    print("Exist origin node with path:", {res_lst[0]["n"]["path"]})
                     # CẦN SỬA LẠI ĐOẠN NÀY
                     connect_node_query = ("""
                         MATCH (a), (b)

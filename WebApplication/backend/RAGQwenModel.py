@@ -50,23 +50,31 @@ class RAGQwen():
         # Load the FAISS vector database with the embedding model
         # self.db = FAISS.load_local(folder_path=vector_db_path, embeddings=self.embedding_model, allow_dangerous_deserialization = True)
 
+        self.system_prompt = "Bạn là một chuyên gia AI trong lĩnh vực pháp lý Việt Nam, có nhiệm vụ trích xuất và trình bày thông tin pháp luật từ văn bản được cung cấp. Bạn cần đảm bảo tính chính xác tuyệt đối và trung thực trong mọi câu trả lời. Hãy cung cấp thông tin một cách chi tiết, đầy đủ và hữu ích nhất cho người dùng, dựa trên ngữ cảnh được cho."
+        self.template = '''**Hướng dẫn:**
 
-        self.system_prompt = "Bạn là một trợ lí Tiếng Việt nhiệt tình và trung thực. Hãy luôn trả lời một cách hữu ích nhất có thể."
-        self.template = '''Chú ý các yêu cầu sau:
-        - Câu trả lời phải chính xác và đầy đủ nếu ngữ cảnh có câu trả lời. 
-        - Chỉ sử dụng các thông tin có trong ngữ cảnh được cung cấp.
-        - Chỉ cần từ chối trả lời và không suy luận gì thêm nếu ngữ cảnh không có câu trả lời.
-        - Nêu rõ từng đề mục trả lời được lấy từ văn bản nào trong ngữ cảnh
-        - Nếu ngữ cảnh chứa câu trả lời, hãy cung cấp câu trả lời chính xác, đầy đủ, bao gồm toàn bộ nội dung liên quan từ ngữ cảnh (văn bản, đề mục, và các chi tiết cụ thể), không bỏ sót thông tin quan trọng.
+        **Tuân thủ nghiêm ngặt các quy tắc sau:**
+        1.  **Chính xác và đầy đủ:** Câu trả lời phải **chính xác tuyệt đối** và **đầy đủ** thông tin **nếu có trong ngữ cảnh**.
+        2.  **Chỉ dùng ngữ cảnh:**  **Tuyệt đối chỉ sử dụng thông tin** từ **ngữ cảnh được cung cấp**. **Không sử dụng kiến thức bên ngoài.**
+        3.  **Từ chối khi không có:** Nếu **ngữ cảnh không chứa câu trả lời**, hãy **từ chối trả lời một cách rõ ràng và ngắn gọn**, **không suy diễn hay tạo thông tin mới.**
+        4.  **Chi tiết và bám sát ngữ cảnh:** Trả lời **chi tiết nhất có thể** nhưng **luôn bám sát và trích dẫn trực tiếp từ ngữ cảnh** khi cần thiết.
 
-        Hãy trả lời câu hỏi dựa trên ngữ cảnh:
-        ### Ngữ cảnh :
-        {context} Thuộc văn bản nào, đề mục cụ thể là gì? Có bị sửa đổi, bãi bỏ, thêm không?
+        **Dưới đây là ngữ cảnh và câu hỏi:**
 
-        ### Câu hỏi :
+        ### **Ngữ cảnh pháp lý:**
+        {context}
+
+        ### **Câu hỏi:**
+        **Định dạng đầu ra:** Trình bày câu trả lời theo định dạng danh sách sau, **giữ nguyên đề mục** như trong ngữ cảnh:
+            ```
+            - **[Đề mục 1]** [Nội dung gốc 1] ([tình trạng pháp lý: sửa đổi/bổ sung/bãi bỏ tại văn bản ...] nếu có)
+            - **[Đề mục 2]** [Nội dung gốc 2] ([tình trạng pháp lý: sửa đổi/bổ sung/bãi bỏ tại văn bản ...] nếu có)
+            - ... (tiếp tục với các đề mục và nội dung khác)
+            ```
         {question}
 
-        ### Trả lời :'''
+        ### **Trả lời:**
+        '''
 
         # Khởi tạo mô hình LLM và tokenizer
         self.model, self.tokenizer = self.load_huggingface_model(self.model_file)
@@ -100,7 +108,7 @@ class RAGQwen():
         tokens = word_tokenize(text, format="text").split()
         return len(tokens)
 
-    def search_query_from_path(self, query: str, k = 7):
+    def search_query_from_path(self, query: str, k = 3):
         """
         Perform a similarity search on the vector database.
         
@@ -179,34 +187,37 @@ class RAGQwen():
 
         # Hồ sơ đề nghị điều chỉnh nội dung Chứng chỉ hành nghề dược gồm những gì?
 
+        origin_results = []
+        modified_results = []
         final_results = []
         # ic(shorten_final_dict)
         for key, val in shorten_final_dict.items():
             doc_id = key.split(" | ")[0]
             path = key.split(" | ")[1]
-            final_results.append(str(doc_id + " " + path + " | " + val))
+            origin_results.append(str(doc_id + " " + path + " | " + val))
             with self.driver.session() as session:
                 modified_nodes = session.read_transaction(get_modified_nodes, doc_id, val)
                 for modified_node in modified_nodes:
-                    final_results.append(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"] + " nội dung thuộc văn bản " + doc_id + " như sau " + modified_node["content"])
+                    modified_results.append(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"] + " nội dung thuộc văn bản " + doc_id + " như sau " + modified_node["content"])
             #     final_results.append(modified_nodes)
             if len(path) > 0:
                 # Get sub nodes
                 with self.driver.session() as session:
                     nodes_list = session.read_transaction(get_sub_nodes, doc_id, path)
                     for node in nodes_list:
-                        final_results.append(node.metadata["d_id"] + " " + node.metadata["path"] + " | " + node.page_content.strip())
+                        origin_results.append(node.metadata["d_id"] + " " + node.metadata["path"] + " | " + node.page_content.strip())
                         modified_nodes = session.read_transaction(get_modified_nodes, node.metadata["d_id"], node.page_content)
                         for modified_node in modified_nodes:
-                            final_results.append(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"]  + " nội dung thuộc văn bản " + doc_id  +  " như sau " + modified_node["content"])
+                            modified_results.append(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"]  + " nội dung thuộc văn bản " + doc_id  +  " như sau " + modified_node["content"])
 
                         # final_results.append(modified_nodes)
                     # for node in nodes_list:
                     #     final_results.append(node.metadata["d_id"] + " " + node.metadata["path"] + " | " + node.page_content.strip())
 
 
-        ic(final_results)
-        return final_results
+        # ic(final_results)
+        return origin_results, modified_results
+        # return final_results
                         
 
 
@@ -226,15 +237,11 @@ class RAGQwen():
         #         final_passages_path.append(str(passage.metadata["d_id"]))
         # return final_passages_full, final_passages_path # Combine with keyword-based retrieval
 
-
-
-        final_passages = [ doc for score, doc in hybrid_results]
-        return final_passages
     
     def get_retrieval_data(self, query: str):
         # CHECK IF QUERY IS A HEADER OR NOT
-        res = self.search_query_from_path(query)
-        return res
+        origin_context, modified_context = self.search_query_from_path(query)
+        return origin_context, modified_context
     
     def load_huggingface_model(self,model_file):
         quantization_config = BitsAndBytesConfig(
@@ -250,12 +257,18 @@ class RAGQwen():
 
     
     def rag_answer(self, prompt):
-        context_list = self.get_retrieval_data(prompt)
+        origin_context, modified_context = self.get_retrieval_data(prompt)
+        origin_context.insert(0, "\nNội dung gốc:")
+        modified_context.insert(0, "\nNội dung sửa đổi, bãi bỏ, bổ sung:")
+        context_list = origin_context + modified_context
         n_tokens = 0
         for context in context_list:
             n_tokens += self.count_tokens_underthesea(context)
-        print(f"😄 there are {n_tokens} tokens in context")
+        
         context = "\n".join(context_list)
+        ic(context)
+        print(f"😄 there are {n_tokens} tokens in context")
+
         # print("\n\n\nCONTEXT:", context)
         # print("\n\n")
         conversation = [{"role": "system", "content": self.system_prompt }]
@@ -269,8 +282,8 @@ class RAGQwen():
 
             generated_ids = self.model.generate(
                 model_inputs.input_ids,
-                max_new_tokens=2048,
-                temperature = 0.1,
+                max_new_tokens=4000,
+                temperature = 0.3,
                 top_p=0.95,
                 top_k=40,
             )
