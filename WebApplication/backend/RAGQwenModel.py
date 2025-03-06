@@ -56,15 +56,14 @@ class RAGQwen():
         - Câu trả lời phải chính xác và đầy đủ nếu ngữ cảnh có câu trả lời. 
         - Chỉ sử dụng các thông tin có trong ngữ cảnh được cung cấp.
         - Chỉ cần từ chối trả lời và không suy luận gì thêm nếu ngữ cảnh không có câu trả lời.
-        - Nếu nhiều nội dung được lấy từ cùng 1 khoản trong tài liệu đã cho, trả về toàn bộ nội dung trong khoản đó một cách chính xác nhất, không thực hiện tóm tắt lại.
-        - Giữ nguyên đề mục của ngữ cảnh để người đọc nắm được thông tin một cách chính xác nhất
-
+        - Trả lời câu hỏi một cách chi tiết và đầy đủ nhất có thể
+        
         Hãy trả lời câu hỏi dựa trên ngữ cảnh:
         ### Ngữ cảnh :
         {context} 
 
         ### Câu hỏi :
-        Sử dụng thông tin từ ngữ cảnh để trả lời câu hỏi sau:{question} có bị sửa đổi, bãi bỏ, bổ sung không? nếu có thì chỉ rõ văn bản nào, đề mục cụ thể?
+        Sử dụng thông tin từ ngữ cảnh để trả lời câu hỏi sau: **{question}?** Nội dung có bị chỉnh sửa/bãi bỏ/bổ sung không? Đưa ra câu trả lời hoàn chỉnh dựa trên nội dung gốc và nội dung bãi bỏ.
 
         ### Trả lời :'''
 
