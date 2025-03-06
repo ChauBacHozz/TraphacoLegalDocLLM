@@ -7,6 +7,8 @@ import hashlib
 from neo4j import GraphDatabase
 from collections import OrderedDict
 import re
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 from backend.preprocess_docx import (normalize_bullets,
                              convert_text_list_to_tree,
                              flatten_tree,
@@ -474,7 +476,7 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver, doc_type = 1):
                 c_bullet_type = "điểm"
             else:
                 c_bullet_type = "khoản"
-        tx.run("MERGE (p:Doc_Node:C_Node:Modified_Node {bullet: $bullet, bullet_type: $bullet_type, content: $content, d_id: $d_id, id: $id, modified_purpose: $modified_purpose, modified_paths: $modified_paths})", bullet = c_bullet, bullet_type = c_bullet_type, content = content, id = id, d_id = root_id, modified_purpose = modified_purpose, modified_paths = modified_paths)
+        tx.run("MERGE (p:Doc_Node:C_Node:Modified_Node {bullet: $bullet, bullet_type: $bullet_type, content: $content, d_id: $d_id, id: $id, modified_purpose: $modified_purpose})", bullet = c_bullet, bullet_type = c_bullet_type, content = content, id = id, d_id = root_id, modified_purpose = modified_purpose)
 
         if modified_doc_id:
             create_virtual_origin_nodes(tx, c_node_id=id, modified_paths=modified_paths, modified_doc_id=modified_doc_id)

@@ -51,23 +51,21 @@ class RAGQwen():
         # self.db = FAISS.load_local(folder_path=vector_db_path, embeddings=self.embedding_model, allow_dangerous_deserialization = True)
 
 
-        self.system_prompt = "Bạn là một trợ lí Tiếng Việt nhiệt tình và trung thực. Hãy luôn trả lời một cách hữu ích nhất có thể."
+        self.system_prompt = "Bạn là một AI chuyên xử lý tài liệu pháp lý Tiếng Việt nhiệt tình và trung thực. Hãy luôn trả lời một cách hữu ích nhất có thể."
         self.template = '''Chú ý các yêu cầu sau:
         - Câu trả lời phải chính xác và đầy đủ nếu ngữ cảnh có câu trả lời. 
         - Chỉ sử dụng các thông tin có trong ngữ cảnh được cung cấp.
         - Chỉ cần từ chối trả lời và không suy luận gì thêm nếu ngữ cảnh không có câu trả lời.
-        - Nêu rõ từng đề mục trả lời được lấy từ văn bản nào trong ngữ cảnh
-        - Nếu ngữ cảnh chứa câu trả lời, hãy cung cấp câu trả lời chính xác, đầy đủ, bao gồm toàn bộ nội dung liên quan từ ngữ cảnh (văn bản, đề mục, và các chi tiết cụ thể), không bỏ sót thông tin quan trọng.
+        - Trả lời câu hỏi một cách chi tiết và đầy đủ nhất có thể
 
         Hãy trả lời câu hỏi dựa trên ngữ cảnh:
         ### Ngữ cảnh :
-        {context} Thuộc văn bản nào, đề mục cụ thể là gì? Có bị sửa đổi, bãi bỏ, thêm không?
+        {context} 
 
         ### Câu hỏi :
-        {question}
+        {question} Nêu rõ về nội dung bị bãi bỏ, chỉnh sửa, sổ sung.
 
-        ### **Trả lời:**
-        '''
+        ### Trả lời :'''
 
         # Khởi tạo mô hình LLM và tokenizer
         self.model, self.tokenizer = self.load_huggingface_model(self.model_file)
@@ -181,8 +179,9 @@ class RAGQwen():
         # Hồ sơ đề nghị điều chỉnh nội dung Chứng chỉ hành nghề dược gồm những gì?
 
         origin_results = []
-        modified_results = []
-        final_results = []
+        origin_results.append("Nội dung gốc:")
+        modified_results = set()
+        modified_results.add("Nội dung sửa đổi, bãi bỏ, bổ sung:")
         # ic(shorten_final_dict)
         for key, val in shorten_final_dict.items():
             doc_id = key.split(" | ")[0]
@@ -191,7 +190,8 @@ class RAGQwen():
             with self.driver.session() as session:
                 modified_nodes = session.read_transaction(get_modified_nodes, doc_id, val)
                 for modified_node in modified_nodes:
-                    modified_results.append(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"] + " nội dung thuộc văn bản " + doc_id + " như sau " + modified_node["content"])
+                    modified_results.add(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"] + " nội dung thuộc văn bản " + doc_id + " như sau " + modified_node["content"])
+                    origin_results[-1] = origin_results[-1] + " | được " + modified_node["modified_purpose"] + " ở " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " văn bản " + modified_node["d_id"]
             #     final_results.append(modified_nodes)
             if len(path) > 0:
                 # Get sub nodes
@@ -201,17 +201,16 @@ class RAGQwen():
                         origin_results.append(node.metadata["d_id"] + " " + node.metadata["path"] + " | " + node.page_content.strip())
                         modified_nodes = session.read_transaction(get_modified_nodes, node.metadata["d_id"], node.page_content)
                         for modified_node in modified_nodes:
-                            final_results.append(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"]  + " nội dung thuộc văn bản " + doc_id  +  " như sau " + modified_node["content"])
-
+                            modified_results.add(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"]  + " nội dung thuộc văn bản " + doc_id  +  " như sau " + modified_node["content"])
+                            origin_results[-1] = origin_results[-1] + " | được " + modified_node["modified_purpose"] + " ở " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " văn bản " + modified_node["d_id"]
                         # final_results.append(modified_nodes)
                     # for node in nodes_list:
                     #     final_results.append(node.metadata["d_id"] + " " + node.metadata["path"] + " | " + node.page_content.strip())
-        
-        # modified_results = list(modified_results)
+
 
         # ic(final_results)
+        modified_results = list(modified_results)
         return origin_results, modified_results
-        # return final_results
                         
 
 
@@ -231,6 +230,10 @@ class RAGQwen():
         #         final_passages_path.append(str(passage.metadata["d_id"]))
         # return final_passages_full, final_passages_path # Combine with keyword-based retrieval
 
+
+
+        final_passages = [ doc for score, doc in hybrid_results]
+        return final_passages
     
     def get_retrieval_data(self, query: str):
         # CHECK IF QUERY IS A HEADER OR NOT
@@ -251,7 +254,10 @@ class RAGQwen():
 
     
     def rag_answer(self, prompt):
-        context_list = self.get_retrieval_data(prompt)
+        origin_context, modified_context = self.get_retrieval_data(prompt)
+        # origin_context.insert(0, "Nội dung gốc")
+        # modified_context.insert(0, "Nội dung sửa đổi, bãi bỏ, bổ sung")
+        context_list = origin_context + modified_context
         n_tokens = 0
         for context in context_list:
             n_tokens += self.count_tokens_underthesea(context)

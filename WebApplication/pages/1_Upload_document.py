@@ -128,6 +128,7 @@ def save_modified_doc_pre_appendix_type2_to_db(extracted_text, heading, doc_numb
     batch_size = 10    
     print("☑️ saving pre-appendix data")
 
+    st.write(f"Saving {doc_number} {heading}")
     for i in stqdm(range(0, len(metadata_lst), batch_size)):
         save_modified_doc_to_db(texts[i:i+batch_size],metadata_lst[i:i+batch_size], driver, doc_type=2)
 
