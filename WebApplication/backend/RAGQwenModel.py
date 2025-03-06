@@ -65,12 +65,7 @@ class RAGQwen():
         {context}
 
         ### **Câu hỏi:**
-        **Định dạng đầu ra:** Trình bày câu trả lời theo định dạng danh sách sau, **giữ nguyên đề mục** như trong ngữ cảnh:
-            ```
-            - **[Đề mục 1]** [Nội dung gốc 1] ([tình trạng pháp lý: sửa đổi/bổ sung/bãi bỏ tại văn bản ...] nếu có)
-            - **[Đề mục 2]** [Nội dung gốc 2] ([tình trạng pháp lý: sửa đổi/bổ sung/bãi bỏ tại văn bản ...] nếu có)
-            - ... (tiếp tục với các đề mục và nội dung khác)
-            ```
+        Phân tích ngữ cảnh gốc và ngữ cảnh sửa đổi, bãi bỏ, bổ sung, thực hiện việc suy luận và tìm ra các đề mục của ngữ cảnh gốc bị sửa đổi. Sử dụng thông tin đó để đưa ra câu trả lời đúng nhất nhằm trả lời câu hỏi sau:
         {question}
 
         ### **Trả lời:**
@@ -258,8 +253,8 @@ class RAGQwen():
     
     def rag_answer(self, prompt):
         origin_context, modified_context = self.get_retrieval_data(prompt)
-        origin_context.insert(0, "\nNội dung gốc:")
-        modified_context.insert(0, "\nNội dung sửa đổi, bãi bỏ, bổ sung:")
+        origin_context.insert(0, "\nNgữ cảnh gốc:")
+        modified_context.insert(0, "\nNgữ cảnh sửa đổi, bãi bỏ, bổ sung:")
         context_list = origin_context + modified_context
         n_tokens = 0
         for context in context_list:
