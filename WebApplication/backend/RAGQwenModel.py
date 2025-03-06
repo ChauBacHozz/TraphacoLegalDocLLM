@@ -203,12 +203,13 @@ class RAGQwen():
                         origin_results.append(node.metadata["d_id"] + " " + node.metadata["path"] + " | " + node.page_content.strip())
                         modified_nodes = session.read_transaction(get_modified_nodes, node.metadata["d_id"], node.page_content)
                         for modified_node in modified_nodes:
-                            modified_results.append(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"]  + " nội dung thuộc văn bản " + doc_id  +  " như sau " + modified_node["content"])
+                            modified_results.append(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"]  + " nội dung thuộc văn bản " + doc_id  +  " như sau " + modified_node["content"])                            # origin_results[-1] = origin_results[-1] + " bị " + modified_node["modified_purpose"] + " từ " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " trong văn bản " + modified_node["d_id"]
 
                         # final_results.append(modified_nodes)
                     # for node in nodes_list:
                     #     final_results.append(node.metadata["d_id"] + " " + node.metadata["path"] + " | " + node.page_content.strip())
-
+        
+        # modified_results = list(modified_results)
 
         # ic(final_results)
         return origin_results, modified_results
