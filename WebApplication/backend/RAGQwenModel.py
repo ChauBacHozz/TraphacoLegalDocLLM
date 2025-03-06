@@ -33,7 +33,7 @@ os.environ["USE_TF"] = "0"
 class RAGQwen():
     def __init__(self, vector_db_path = "vectorstores/db_faiss", 
                  embedding_model = None,
-                 model_file = "AITeamVN/Vi-Qwen2-7B-RAG",
+                 model_file = "AITeamVN/Vi-Qwen2-3B-RAG",
                  ):
         
         self.vector_db_path = vector_db_path
@@ -70,11 +70,13 @@ class RAGQwen():
 
         # Khởi tạo mô hình LLM và tokenizer
         self.model, self.tokenizer = self.load_huggingface_model(self.model_file)
-        WINDOWS_IP = "28.11.5.39"
-        URI = f"bolt://{WINDOWS_IP}:7687"
+        # WINDOWS_IP = "28.11.5.39"
+        # URI = f"bolt://{WINDOWS_IP}:7687"
+        # USERNAME = "neo4j"
+        # PASSWORD = "phongthang2012"
+        URI = "neo4j+s://13d9b8ff.databases.neo4j.io"
         USERNAME = "neo4j"
-        PASSWORD = "phongthang2012"
-
+        PASSWORD = "tDJXOWtq9GSTnXqQyVFmb2xiR3GREbxnU8m9MxxWHwU"
         self.driver = GraphDatabase.driver(URI, auth=(USERNAME, PASSWORD))
     def load_faiss_and_data(self, index_path, path_index_path, data_path, metadata_path):
         index = faiss.read_index(index_path)
