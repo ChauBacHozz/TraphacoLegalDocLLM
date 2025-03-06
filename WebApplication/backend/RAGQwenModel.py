@@ -50,22 +50,20 @@ class RAGQwen():
         # Load the FAISS vector database with the embedding model
         # self.db = FAISS.load_local(folder_path=vector_db_path, embeddings=self.embedding_model, allow_dangerous_deserialization = True)
 
-        self.system_prompt = "Bạn là một chuyên gia AI trong lĩnh vực pháp lý Việt Nam, có nhiệm vụ trích xuất và trình bày thông tin pháp luật từ văn bản được cung cấp. Bạn cần đảm bảo tính chính xác tuyệt đối và trung thực trong mọi câu trả lời. Hãy cung cấp thông tin một cách chi tiết, đầy đủ và hữu ích nhất cho người dùng, dựa trên ngữ cảnh được cho."
-        self.template = '''**Hướng dẫn:**
 
-        **Tuân thủ nghiêm ngặt các quy tắc sau:**
-        1.  **Chính xác và đầy đủ:** Câu trả lời phải **chính xác tuyệt đối** và **đầy đủ** thông tin **nếu có trong ngữ cảnh**.
-        2.  **Chỉ dùng ngữ cảnh:**  **Tuyệt đối chỉ sử dụng thông tin** từ **ngữ cảnh được cung cấp**. **Không sử dụng kiến thức bên ngoài.**
-        3.  **Từ chối khi không có:** Nếu **ngữ cảnh không chứa câu trả lời**, hãy **từ chối trả lời một cách rõ ràng và ngắn gọn**, **không suy diễn hay tạo thông tin mới.**
-        4.  **Chi tiết và bám sát ngữ cảnh:** Trả lời **chi tiết nhất có thể** nhưng **luôn bám sát và trích dẫn trực tiếp từ ngữ cảnh** khi cần thiết.
+        self.system_prompt = "Bạn là một trợ lí Tiếng Việt nhiệt tình và trung thực. Hãy luôn trả lời một cách hữu ích nhất có thể."
+        self.template = '''Chú ý các yêu cầu sau:
+        - Câu trả lời phải chính xác và đầy đủ nếu ngữ cảnh có câu trả lời. 
+        - Chỉ sử dụng các thông tin có trong ngữ cảnh được cung cấp.
+        - Chỉ cần từ chối trả lời và không suy luận gì thêm nếu ngữ cảnh không có câu trả lời.
+        - Nêu rõ từng đề mục trả lời được lấy từ văn bản nào trong ngữ cảnh
+        - Nếu ngữ cảnh chứa câu trả lời, hãy cung cấp câu trả lời chính xác, đầy đủ, bao gồm toàn bộ nội dung liên quan từ ngữ cảnh (văn bản, đề mục, và các chi tiết cụ thể), không bỏ sót thông tin quan trọng.
 
-        **Dưới đây là ngữ cảnh và câu hỏi:**
+        Hãy trả lời câu hỏi dựa trên ngữ cảnh:
+        ### Ngữ cảnh :
+        {context} Thuộc văn bản nào, đề mục cụ thể là gì? Có bị sửa đổi, bãi bỏ, thêm không?
 
-        ### **Ngữ cảnh pháp lý:**
-        {context}
-
-        ### **Câu hỏi:**
-        Phân tích ngữ cảnh gốc và ngữ cảnh sửa đổi, bãi bỏ, bổ sung, thực hiện việc suy luận và tìm ra các đề mục của ngữ cảnh gốc bị sửa đổi. Sử dụng thông tin đó để đưa ra câu trả lời đúng nhất nhằm trả lời câu hỏi sau:
+        ### Câu hỏi :
         {question}
 
         ### **Trả lời:**
@@ -203,7 +201,7 @@ class RAGQwen():
                         origin_results.append(node.metadata["d_id"] + " " + node.metadata["path"] + " | " + node.page_content.strip())
                         modified_nodes = session.read_transaction(get_modified_nodes, node.metadata["d_id"], node.page_content)
                         for modified_node in modified_nodes:
-                            modified_results.append(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"]  + " nội dung thuộc văn bản " + doc_id  +  " như sau " + modified_node["content"])                            # origin_results[-1] = origin_results[-1] + " bị " + modified_node["modified_purpose"] + " từ " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " trong văn bản " + modified_node["d_id"]
+                            final_results.append(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"]  + " nội dung thuộc văn bản " + doc_id  +  " như sau " + modified_node["content"])
 
                         # final_results.append(modified_nodes)
                     # for node in nodes_list:
@@ -253,10 +251,7 @@ class RAGQwen():
 
     
     def rag_answer(self, prompt):
-        origin_context, modified_context = self.get_retrieval_data(prompt)
-        origin_context.insert(0, "\nNgữ cảnh gốc:")
-        modified_context.insert(0, "\nNgữ cảnh sửa đổi, bãi bỏ, bổ sung:")
-        context_list = origin_context + modified_context
+        context_list = self.get_retrieval_data(prompt)
         n_tokens = 0
         for context in context_list:
             n_tokens += self.count_tokens_underthesea(context)
