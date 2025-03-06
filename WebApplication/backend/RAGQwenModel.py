@@ -19,6 +19,7 @@ from langchain.schema import Document
 from langchain.vectorstores.utils import maximal_marginal_relevance
 from neo4j import GraphDatabase
 from icecream import ic
+from ordered_set import OrderedSet
 
 import os
 os.environ["USE_TORCH"] = "1"
@@ -63,7 +64,7 @@ class RAGQwen():
         {context} 
 
         ### Câu hỏi :
-        Sử dụng thông tin từ ngữ cảnh để trả lời câu hỏi sau: **{question}?** Nội dung có bị chỉnh sửa/bãi bỏ/bổ sung không? Đưa ra câu trả lời hoàn chỉnh dựa trên nội dung gốc và nội dung bãi bỏ.
+        Sử dụng thông tin từ ngữ cảnh (luôn bám sát và trích dẫn trực tiếp từ ngữ cảnh) để trả lời câu hỏi sau: **{question},trả lời đồng thời nội dung gốc và nội dung bổ sung, sửa đổi, bãi bỏ tương ứng?
 
         ### Trả lời :'''
 
@@ -180,7 +181,7 @@ class RAGQwen():
 
         origin_results = []
         origin_results.append("Nội dung gốc:")
-        modified_results = set()
+        modified_results = OrderedSet()
         modified_results.add("Nội dung sửa đổi, bãi bỏ, bổ sung:")
         # ic(shorten_final_dict)
         for key, val in shorten_final_dict.items():
