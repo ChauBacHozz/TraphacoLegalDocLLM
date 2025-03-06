@@ -90,9 +90,9 @@ class RAGQwen():
     def get_model_ready(self):
         self.paper_store = Neo4jVector.from_existing_index(
             embedding=self.embedding_model,
-            url="bolt://28.11.5.39:7687",
+            url="neo4j+s://13d9b8ff.databases.neo4j.io",
             username="neo4j",
-            password="phongthang2012",
+            password="tDJXOWtq9GSTnXqQyVFmb2xiR3GREbxnU8m9MxxWHwU",
             index_name="doc_index",
             text_node_property="content"
         )     
