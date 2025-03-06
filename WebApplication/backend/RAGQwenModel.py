@@ -253,7 +253,7 @@ class RAGQwen():
         # quantization_config = BitsAndBytesConfig(load_in_8bit=True, llm_int8_threshold = 6.0)
         model = AutoModelForCausalLM.from_pretrained(model_file, device_map="auto", quantization_config=quantization_config)
         tokenizer = AutoTokenizer.from_pretrained(model_file)
-        MODEL_DIR = "/kaggle/input/your-saved-model"
+        MODEL_DIR = "/kaggle/input/qwen-model"
 
         # Check if the model is available, if not, download
         if not os.path.exists(MODEL_DIR):
