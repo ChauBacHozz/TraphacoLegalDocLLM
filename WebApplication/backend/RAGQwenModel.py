@@ -64,8 +64,12 @@ class RAGQwen():
         {context} 
 
         ### Câu hỏi :
-        Sử dụng thông tin từ ngữ cảnh (luôn bám sát và trích dẫn trực tiếp từ ngữ cảnh) để trả lời câu hỏi sau: **{question},trả lời đồng thời nội dung gốc và nội dung bổ sung, sửa đổi, bãi bỏ tương ứng?
-
+        Sử dụng thông tin từ ngữ cảnh, trả lời theo cấu trúc như sau:
+        - đề mục a <Nội dung> (bị bãi bỏ, sửa đổi, bổ sung ở văn bản ... nếu có)
+        - đề mục b <Nội dung> (bị bãi bỏ, sửa đổi, bổ sung ở văn bản ... nếu có)
+        - ...
+        Câu hỏi như sau: {question}
+        
         ### Trả lời :'''
 
         # Khởi tạo mô hình LLM và tokenizer
