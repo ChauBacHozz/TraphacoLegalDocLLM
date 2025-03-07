@@ -33,7 +33,7 @@ os.environ["USE_TF"] = "0"
 class RAGQwen():
     def __init__(self, vector_db_path = "vectorstores/db_faiss", 
                  embedding_model = None,
-                 model_file = "AITeamVN/Vi-Qwen2-7B-RAG",
+                 model_file = "AITeamVN/Vi-Qwen2-3B-RAG",
                  ):
         
         self.vector_db_path = vector_db_path
