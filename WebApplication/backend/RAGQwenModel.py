@@ -64,12 +64,12 @@ class RAGQwen():
         {context} 
 
         ### Câu hỏi :
-        Sử dụng thông tin từ ngữ cảnh, trả lời theo cấu trúc như sau:
-        - đề mục a <Nội dung> (bị bãi bỏ, sửa đổi, bổ sung ở văn bản ... nếu có)
-        - đề mục b <Nội dung> (bị bãi bỏ, sửa đổi, bổ sung ở văn bản ... nếu có)
-        - ...
-        Câu hỏi như sau: {question}
-        
+        {question}
+
+        Trả lời theo cấu trúc sau:
+		1. Đề mục a: <Nội dung> (nếu có thay đổi như bị bãi bỏ, sửa đổi, bổ sung, hãy ghi rõ)
+		2. Đề mục b: <Nội dung> (nếu có thay đổi như bị bãi bỏ, sửa đổi, bổ sung, hãy ghi rõ)
+
         ### Trả lời :'''
 
         # Khởi tạo mô hình LLM và tokenizer
