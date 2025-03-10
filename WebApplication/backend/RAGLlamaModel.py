@@ -33,7 +33,7 @@ os.environ["USE_TF"] = "0"
 class RAGLlama():
     def __init__(self, vector_db_path = "vectorstores/db_faiss", 
                  embedding_model = None,
-                 model_file = "ghost-x/ghost-8b-beta-1608",
+                 model_file = "AITeamVN/Vi-Qwen2-7B-RAG",
                  ):
         
         self.vector_db_path = vector_db_path
@@ -305,16 +305,16 @@ class RAGLlama():
             indent=2,
             ensure_ascii=False,
         )
-        # conversation = [{"role": "system", "content": self.system_prompt }]
-        # conversation.append({"role": "user", "content": self.template.format(context = context, question = prompt)})
-        ic(refs)
-        conversation = [
-        # Here you can still set up system prompts.
-        # Also tell the model how to use additional reference information.
-            {"role": "system", "content": ""},
-            {"role": "refs", "content": refs},
-            {"role": "user", "content": "Chỉ sử dụng ngữ cảnh, KHÔNG thêm nội dung, trả lời câu hỏi sau:" + prompt},
-        ]
+        conversation = [{"role": "system", "content": self.system_prompt }]
+        conversation.append({"role": "user", "content": self.template.format(context = context, question = prompt)})
+        # ic(refs)
+        # conversation = [
+        # # Here you can still set up system prompts.
+        # # Also tell the model how to use additional reference information.
+        #     {"role": "system", "content": ""},
+        #     {"role": "refs", "content": refs},
+        #     {"role": "user", "content": "Chỉ sử dụng ngữ cảnh, KHÔNG thêm nội dung, trả lời câu hỏi sau:" + prompt + "LƯU Ý: KHÔNG SUY LUẬN HAY BỔ SUNG THÔNG TIN, GIỮ NGUYÊN ĐỀ MỤC TRONG NGỮ CẢNH"},
+        # ]
         with torch.inference_mode():
             text = self.tokenizer.apply_chat_template(
                 conversation,
