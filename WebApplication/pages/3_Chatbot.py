@@ -44,6 +44,7 @@ if "rag_model" in st.session_state:
         # Generate model response
         with st.spinner("Hãy chờ chút, mô hình đang trả lời!!!!"):
             response = rag_model.rag_answer(prompt)  # Use the loaded model
+            print(response)
         st.success("Mô hình đã suy luận xong, thực hiện trả lời!")
 
         # Typing effect for the assistant's response

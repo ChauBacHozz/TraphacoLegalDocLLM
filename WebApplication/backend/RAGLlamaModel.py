@@ -30,10 +30,10 @@ os.environ["USE_TF"] = "0"
 # os.environ['HF_DATASETS_CACHE'] = PATH
 # os.environ['TORCH_HOME'] = PATH
 
-class RAGQwen():
+class RAGLlama():
     def __init__(self, vector_db_path = "vectorstores/db_faiss", 
                  embedding_model = None,
-                 model_file = "meta-llama/Meta-Llama-3-8B",
+                 model_file = "ghost-x/ghost-8b-beta-1608",
                  ):
         
         self.vector_db_path = vector_db_path
@@ -54,35 +54,20 @@ class RAGQwen():
         self.system_prompt = "Bạn là một AI chuyên xử lý tài liệu pháp lý Tiếng Việt nhiệt tình và trung thực. Hãy luôn trả lời một cách chính xác và chi tiết theo đúng cấu trúc yêu cầu."
 
         self.template = '''Khi trả lời câu hỏi liên quan đến các quy định pháp luật, bạn PHẢI tuân thủ nghiêm ngặt các nguyên tắc sau:
-
         1. PHẢI giữ nguyên cấu trúc đề mục chính xác như trong văn bản gốc (ví dụ: "Nghị định số/năm/NĐ-CP chương X > mục Y > điều Z > khoản N > điểm M"). Không được rút gọn hoặc thay đổi định dạng này.
-
-        2. PHẢI hiển thị rõ ràng nội dung bị bãi bỏ, sửa đổi hoặc bổ sung bằng cách:
-        - Đối với nội dung bị bãi bỏ: Sử dụng định dạng **bôi đậm** và ghi rõ "**đã bị bãi bỏ bởi [số văn bản] [thời điểm bãi bỏ]**"
-        - Đối với nội dung được sửa đổi: Sử dụng định dạng *in nghiêng* cho nội dung cũ, sau đó ghi rõ "*đã được sửa đổi thành [nội dung mới] bởi [số văn bản] [thời điểm sửa đổi]*"
-        - Đối với nội dung được bổ sung: Sử dụng định dạng __gạch chân__ và ghi rõ "__đã được bổ sung bởi [số văn bản] [thời điểm bổ sung]__"
-
-        3. PHẢI sao chép chính xác mọi đề mục và nội dung trong ngữ cảnh được cung cấp. Không được tóm tắt hoặc diễn giải lại nội dung.
-
-        4. PHẢI sử dụng đúng định dạng markdown:
-        - Đối với nội dung bị bãi bỏ: sử dụng **hai dấu sao ở đầu và cuối**
-        - Đối với nội dung được sửa đổi: sử dụng *một dấu sao ở đầu và cuối*
-        - Đối với nội dung được bổ sung: sử dụng __hai dấu gạch dưới ở đầu và cuối__
-
-        5. PHẢI luôn bắt đầu câu trả lời bằng cách sao chép chính xác cấu trúc đề mục từ ngữ cảnh được cung cấp.
-
-        6. Kết thúc câu trả lời bằng việc tóm tắt những thay đổi quan trọng nhất từ các văn bản sửa đổi, bổ sung (nếu có).
+        2. PHẢI thực hiện tóm tắt lại ngữ cảnh theo các ý chính, NÊU RÕ nội dung được tóm tắm được lấy từ đề mục nào thuộc văn bản nào, PHẢI hiển thị rõ ràng nội dung bị bãi bỏ, sửa đổi, bổ sung
+        3. PHẢI sao chép chính xác mọi đề mục trong ngữ cảnh được cung cấp
 
         KHÔNG ĐƯỢC thêm bất kỳ nội dung nào ngoài các nội dung trong ngữ cảnh được cung cấp.
         KHÔNG ĐƯỢC thay đổi hoặc rút gọn cấu trúc đề mục.
         KHÔNG ĐƯỢC thay đổi văn phong hoặc cách diễn đạt của văn bản gốc.
 
-        Hãy trả lời câu hỏi dựa trên ngữ cảnh:
+        Trả lời câu hỏi dựa trên ngữ cảnh
         ### Ngữ cảnh:
         {context} 
 
         ### Câu hỏi:
-        {question}
+        {question} Trả lời một cách ngắn gọn.
 
         ### Trả lời:'''        # Khởi tạo mô hình LLM và tokenizer
         self.model, self.tokenizer = self.load_huggingface_model(self.model_file)
@@ -209,7 +194,7 @@ class RAGQwen():
             with self.driver.session() as session:
                 modified_nodes = session.read_transaction(get_modified_nodes, doc_id, val)
                 for modified_node in modified_nodes:
-                    modified_results.add(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"] + " nội dung thuộc văn bản " + doc_id + " như sau " + modified_node["content"])
+                    # modified_results.add(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"] + " nội dung thuộc văn bản " + doc_id + " như sau " + modified_node["content"])
                     origin_results[-1] = origin_results[-1] + " **Được " + modified_node["modified_purpose"] + " ở " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " văn bản " + modified_node["d_id"] + " .**"
             #     final_results.append(modified_nodes)
             if len(path) > 0:
@@ -220,7 +205,7 @@ class RAGQwen():
                         origin_results.append(node.metadata["d_id"] + " " + node.metadata["path"] + " | " + node.page_content.strip())
                         modified_nodes = session.read_transaction(get_modified_nodes, node.metadata["d_id"], node.page_content)
                         for modified_node in modified_nodes:
-                            modified_results.add(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"]  + " nội dung thuộc văn bản " + doc_id  +  " như sau " + modified_node["content"])
+                            # modified_results.add(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"]  + " nội dung thuộc văn bản " + doc_id  +  " như sau " + modified_node["content"])
                             origin_results[-1] = origin_results[-1] + " **Được " + modified_node["modified_purpose"] + " ở " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " văn bản " + modified_node["d_id"] + " .**"
                         # final_results.append(modified_nodes)
                     # for node in nodes_list:
@@ -312,10 +297,11 @@ class RAGQwen():
 
             generated_ids = self.model.generate(
                 model_inputs.input_ids,
-                max_new_tokens=4000,
-                temperature = 0.5,
-                top_p=0.95,
+                max_new_tokens=1480,
+                temperature = 0.2,
+                top_p=0.85,
                 top_k=40,
+                pad_token_id=self.tokenizer.eos_token_id
             )
             generated_ids = [
                 output_ids[len(input_ids):] for input_ids, output_ids in zip(model_inputs.input_ids, generated_ids)
