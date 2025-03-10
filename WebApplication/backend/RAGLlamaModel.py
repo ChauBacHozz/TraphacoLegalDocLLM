@@ -20,7 +20,7 @@ from langchain.vectorstores.utils import maximal_marginal_relevance
 from neo4j import GraphDatabase
 from icecream import ic
 from ordered_set import OrderedSet
-
+import json
 import os
 os.environ["USE_TORCH"] = "1"
 os.environ["USE_TF"] = "0"
@@ -52,22 +52,19 @@ class RAGLlama():
         # self.db = FAISS.load_local(folder_path=vector_db_path, embeddings=self.embedding_model, allow_dangerous_deserialization = True)
 
         self.system_prompt = "Bạn là một AI chuyên xử lý tài liệu pháp lý Tiếng Việt nhiệt tình và trung thực. Hãy luôn trả lời một cách chính xác và chi tiết theo đúng cấu trúc yêu cầu."
-
         self.template = '''Khi trả lời câu hỏi liên quan đến các quy định pháp luật, bạn PHẢI tuân thủ nghiêm ngặt các nguyên tắc sau:
-        1. PHẢI giữ nguyên cấu trúc đề mục chính xác như trong văn bản gốc (ví dụ: "Nghị định số/năm/NĐ-CP chương X > mục Y > điều Z > khoản N > điểm M"). Không được rút gọn hoặc thay đổi định dạng này.
-        2. PHẢI thực hiện tóm tắt lại ngữ cảnh theo các ý chính, NÊU RÕ nội dung được tóm tắm được lấy từ đề mục nào thuộc văn bản nào, PHẢI hiển thị rõ ràng nội dung bị bãi bỏ, sửa đổi, bổ sung
-        3. PHẢI sao chép chính xác mọi đề mục trong ngữ cảnh được cung cấp
-
-        KHÔNG ĐƯỢC thêm bất kỳ nội dung nào ngoài các nội dung trong ngữ cảnh được cung cấp.
-        KHÔNG ĐƯỢC thay đổi hoặc rút gọn cấu trúc đề mục.
-        KHÔNG ĐƯỢC thay đổi văn phong hoặc cách diễn đạt của văn bản gốc.
+        - Chỉ trả lời dựa trên thông tin có trong ngữ cảnh được cung cấp, không sử dụng bất kỳ thông tin nào ngoài ngữ cảnh.
+        - Phải nêu rõ câu trả lời được lấy từ nội dung của văn bản nào, đề mục như thế nào.
+        - Nếu ngữ cảnh chứa câu trả lời, hãy cung cấp câu trả lời chính xác, đầy đủ, bao gồm toàn bộ nội dung liên quan từ ngữ cảnh (văn bản, đề mục, và các chi tiết cụ thể), không bỏ sót thông tin quan trọng.
+        - Trích dẫn đầy đủ và chính xác các văn bản, điều, khoản, hoặc đề mục được nêu trong ngữ cảnh để tránh thiếu sót.
+        - Nếu ngữ cảnh không chứa câu trả lời, chỉ từ chối trả lời bằng cách nêu rõ không có thông tin, không suy luận hay bổ sung thêm.
 
         Trả lời câu hỏi dựa trên ngữ cảnh
         ### Ngữ cảnh:
         {context} 
 
         ### Câu hỏi:
-        {question} Trả lời một cách ngắn gọn.
+        Trả lời một cách chi tiết câu hỏi sau: {question}
 
         ### Trả lời:'''        # Khởi tạo mô hình LLM và tokenizer
         self.model, self.tokenizer = self.load_huggingface_model(self.model_file)
@@ -170,7 +167,15 @@ class RAGLlama():
                              """
             result = tx.run(query_sub_info, d_id = doc_id, path = path)
             result = list(result)
-            return [Document(page_content=doc["n"]["content"], metadata={"d_id": doc["n"]["d_id"], "path": doc["n"]["path"]}) for doc in result if doc["n"]["path"] != path]
+            return [Document(page_content=doc["m"]["content"], metadata={"d_id": doc["n"]["d_id"], "path": doc["n"]["path"]}) for doc in result if doc["n"]["path"] != path]
+        
+        def get_sub_nodes_lv1(tx, doc_id, path):
+            query_sub_info = """ MATCH (n:Doc_Node:Origin_Node {d_id: $d_id, path: $path})-[:CONTAIN]->(m:Doc_Node:Origin_Node {d_id: $d_id})
+                                RETURN m ORDER BY elementId(m)
+                             """
+            result = tx.run(query_sub_info, d_id = doc_id, path = path)
+            result = list(result)
+            return [Document(page_content=doc["m"]["content"], metadata={"d_id": doc["m"]["d_id"], "path": doc["m"]["path"]}) for doc in result if doc["m"]["path"] != path]
         
         def get_modified_nodes(tx, doc_id, content):
             query = """ 
@@ -183,9 +188,9 @@ class RAGLlama():
         # Hồ sơ đề nghị điều chỉnh nội dung Chứng chỉ hành nghề dược gồm những gì?
 
         origin_results = []
-        origin_results.append("Nội dung gốc:")
+        # origin_results.append("Nội dung gốc:")
         modified_results = OrderedSet()
-        modified_results.add("Nội dung sửa đổi, bãi bỏ, bổ sung:")
+        # modified_results.add("Nội dung sửa đổi, bãi bỏ, bổ sung:")
         # ic(shorten_final_dict)
         for key, val in shorten_final_dict.items():
             doc_id = key.split(" | ")[0]
@@ -193,20 +198,20 @@ class RAGLlama():
             origin_results.append(str(doc_id + " " + path + " | " + val))
             with self.driver.session() as session:
                 modified_nodes = session.read_transaction(get_modified_nodes, doc_id, val)
-                for modified_node in modified_nodes:
+                # for modified_node in modified_nodes:
                     # modified_results.add(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"] + " nội dung thuộc văn bản " + doc_id + " như sau " + modified_node["content"])
-                    origin_results[-1] = origin_results[-1] + " **Được " + modified_node["modified_purpose"] + " ở " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " văn bản " + modified_node["d_id"] + " .**"
+                    # origin_results[-1] = origin_results[-1] + "- Được " + modified_node["modified_purpose"] + " ở " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " văn bản " + modified_node["d_id"] + " .\n"
             #     final_results.append(modified_nodes)
             if len(path) > 0:
                 # Get sub nodes
                 with self.driver.session() as session:
-                    nodes_list = session.read_transaction(get_sub_nodes, doc_id, path)
+                    nodes_list = session.read_transaction(get_sub_nodes_lv1, doc_id, path)
                     for node in nodes_list:
-                        origin_results.append(node.metadata["d_id"] + " " + node.metadata["path"] + " | " + node.page_content.strip())
+                        origin_results[-1] = origin_results[-1] + "\n" + node.metadata["path"].split(" > ")[-1].split(" ")[0] + " " + node.page_content.strip()
                         modified_nodes = session.read_transaction(get_modified_nodes, node.metadata["d_id"], node.page_content)
-                        for modified_node in modified_nodes:
+                        # for modified_node in modified_nodes:
                             # modified_results.add(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"]  + " nội dung thuộc văn bản " + doc_id  +  " như sau " + modified_node["content"])
-                            origin_results[-1] = origin_results[-1] + " **Được " + modified_node["modified_purpose"] + " ở " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " văn bản " + modified_node["d_id"] + " .**"
+                            # origin_results[-1] = origin_results[-1] + "- Được " + modified_node["modified_purpose"] + " ở " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " văn bản " + modified_node["d_id"] + " ."
                         # final_results.append(modified_nodes)
                     # for node in nodes_list:
                     #     final_results.append(node.metadata["d_id"] + " " + node.metadata["path"] + " | " + node.page_content.strip())
@@ -281,13 +286,35 @@ class RAGLlama():
             n_tokens += self.count_tokens_underthesea(context)
         
         context = "\n".join(context_list)
-        ic(context)
         print(f"😄 there are {n_tokens} tokens in context")
 
         # print("\n\n\nCONTEXT:", context)
         # print("\n\n")
-        conversation = [{"role": "system", "content": self.system_prompt }]
-        conversation.append({"role": "user", "content": self.template.format(context = context, question = prompt)})
+        refs = json.dumps(
+            {
+                "instructions": """Bạn là một AI chuyên xử lý tài liệu pháp lý Tiếng Việt nhiệt tình và trung thực. Hãy luôn trả lời một cách chính xác và chi tiết theo đúng cấu trúc yêu cầu. Khi trả lời câu hỏi liên quan đến các quy định pháp luật, bạn PHẢI tuân thủ nghiêm ngặt các nguyên tắc sau:
+                    - Chỉ trả lời dựa trên thông tin có trong ngữ cảnh được cung cấp, không sử dụng bất kỳ thông tin nào ngoài ngữ cảnh.
+                    - Phải nêu rõ câu trả lời được lấy từ nội dung của văn bản nào, đề mục như thế nào.
+                    - Nếu ngữ cảnh chứa câu trả lời, hãy cung cấp câu trả lời chính xác, đầy đủ, bao gồm toàn bộ nội dung liên quan từ ngữ cảnh (văn bản, đề mục, và các chi tiết cụ thể), không bỏ sót thông tin quan trọng.
+                    - Trích dẫn đầy đủ và chính xác các văn bản, điều, khoản, hoặc đề mục được nêu trong ngữ cảnh để tránh thiếu sót.
+                    - Nếu ngữ cảnh không chứa câu trả lời, chỉ từ chối trả lời bằng cách nêu rõ không có thông tin, không suy luận hay bổ sung thêm.
+
+                    Trả lời câu hỏi dựa trên ngữ cảnh""",
+                "documents": context_list
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+        # conversation = [{"role": "system", "content": self.system_prompt }]
+        # conversation.append({"role": "user", "content": self.template.format(context = context, question = prompt)})
+        ic(refs)
+        conversation = [
+        # Here you can still set up system prompts.
+        # Also tell the model how to use additional reference information.
+            {"role": "system", "content": ""},
+            {"role": "refs", "content": refs},
+            {"role": "user", "content": "Chỉ sử dụng ngữ cảnh, KHÔNG thêm nội dung, trả lời câu hỏi sau:" + prompt},
+        ]
         with torch.inference_mode():
             text = self.tokenizer.apply_chat_template(
                 conversation,
@@ -297,9 +324,9 @@ class RAGLlama():
 
             generated_ids = self.model.generate(
                 model_inputs.input_ids,
-                max_new_tokens=1480,
-                temperature = 0.2,
-                top_p=0.85,
+                max_new_tokens=4000,
+                temperature = 0.1,
+                top_p=0.95,
                 top_k=40,
                 pad_token_id=self.tokenizer.eos_token_id
             )
@@ -308,3 +335,4 @@ class RAGLlama():
             ]
             response = self.tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
             return response
+
