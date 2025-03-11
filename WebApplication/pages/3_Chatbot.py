@@ -1,9 +1,11 @@
 import streamlit as st
 import time
-from backend.RAGQwenModel import RAGQwen
 import os
 
 model_exist = False
+st.title("Legal chatbot LLM")
+
+
 if "rag_model" in st.session_state:
     rag_model = st.session_state.rag_model
 
@@ -17,7 +19,14 @@ if "rag_model" in st.session_state:
             st.markdown(message["content"])
 else:
     st.write("No data found in session state.")
+# Initialize session state variable
 
+if "show_dialog" not in st.session_state:
+    st.session_state.show_dialog = False
+
+# Function to toggle the dialog visibility
+def toggle_dialog():
+    st.session_state.show_dialog = not st.session_state.show_dialog
 
 @st.dialog("LLM Setting", width="large")
 def model_setting(rag_model):
@@ -52,9 +61,9 @@ def model_setting(rag_model):
 
         if st.button("Save", use_container_width=True):
             saved_success = True
-            if int(max_tokens) and float(temperature) and float(top_p) and float(top_k):
+            if int(max_tokens) and float(temperature) and float(top_p) and int(top_k):
                 # Save params to rag model
-                rag_model.set_control_params(int(max_tokens), float(temperature), float(top_p), float(top_k))
+                rag_model.set_control_params(int(max_tokens), float(temperature), float(top_p), int(top_k))
 
                 rag_model.system_prompt = system_prompt
                 if "{context}" in template and "{question}" in template:
@@ -66,18 +75,13 @@ def model_setting(rag_model):
                 saved_success = False
 
             if saved_success:
-                st.rerun()
-            
+                st.toast("✅ saved params to model!")
+            else:
+                # Print error
+                pass
 
 
-col1, col2 = st.columns([10, 1])
-with col1:
-    st.title("Legal chatbot LLM")
 
-with col2:
-    if st.button('🤖', use_container_width=True):
-        if model_exist:
-            model_setting(rag_model)
 
 
 
@@ -92,6 +96,10 @@ def display_tokens(token_stream, container):
 
 if model_exist:
     # Handle user input
+    with st.sidebar:
+        if st.button('🤖'):
+            if model_exist:
+                model_setting(rag_model)
     if prompt := st.chat_input("Nhập câu hỏi của bạn..."):
         with st.chat_message("user"):
             st.markdown(prompt)
