@@ -187,20 +187,23 @@ class RAGQwen25():
             return [record["modifier"] for record in result] or []  # Ensure it returns an empty list
 
         def get_modified_path(tx, doc_id, id):
-            query = """ 
-            MATCH p = (r:Modified_Node:R_Node {d_id: $d_id})-[*]->(c:Modified_Node {d_id: $d_id, id: $id})
-            WHERE Not (r)<-[]-()
-            RETURN p
+            query = """
+            MATCH path = (root:R_Node:Modified_Node {d_id: $d_id})-[:CONTAIN*]->(t:Modified_Node {d_id: $d_id, id: $id})
+            WHERE NOT (root)<-[]-()
+            UNWIND nodes(path) AS node
+            WITH node, head(nodes(path)) AS root_node 
+            WHERE node <> root_node  
+            RETURN DISTINCT node
             """
             result = tx.run(query, d_id = doc_id, id = id)
-            path = [record["p"] for record in result]
+            path = [record["node"] for record in result]
             return path
         # Hồ sơ đề nghị điều chỉnh nội dung Chứng chỉ hành nghề dược gồm những gì?
 
         origin_results = []
-        # origin_results.append("Nội dung gốc:")
+        origin_results.append("Nội dung gốc:")
         modified_results = OrderedSet()
-        # modified_results.add("Nội dung sửa đổi, bãi bỏ, bổ sung:")
+        modified_results.add("Nội dung sửa đổi, bãi bỏ, bổ sung:")
         # ic(shorten_final_dict)
         for key, val in shorten_final_dict.items():
             doc_id = key.split(" | ")[0]
@@ -210,9 +213,12 @@ class RAGQwen25():
                 modified_nodes = session.read_transaction(get_modified_nodes, doc_id, val)
                 for modified_node in modified_nodes:
                     modified_results.add(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"] + " nội dung thuộc văn bản " + doc_id + " như sau " + modified_node["content"])
-                    m_path = session.read_transaction(get_modified_path, modified_node["d_id"], modified_node["id"])
-                    print(m_path)
-                    origin_results[-1] = origin_results[-1] + "- Được " + modified_node["modified_purpose"] + " ở " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " văn bản " + modified_node["d_id"] + " .\n"
+                    m_paths = session.read_transaction(get_modified_path, modified_node["d_id"], modified_node["id"])
+                    m_path = OrderedSet()
+                    for p in m_paths:
+                        m_path.add(p["bullet_type"] + " " + p["bullet"])
+                    m_path = " ".join(list(m_path))
+                    origin_results[-1] = origin_results[-1] + " (Được " + modified_node["modified_purpose"] + " ở " + m_path + " thuộc văn bản " + modified_node["d_id"] + ")."
             #     final_results.append(modified_nodes)
             if len(path) > 0:
                 # Get sub nodes
@@ -223,9 +229,12 @@ class RAGQwen25():
                         modified_nodes = session.read_transaction(get_modified_nodes, node.metadata["d_id"], node.page_content)
                         for modified_node in modified_nodes:
                             modified_results.add(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"]  + " nội dung thuộc văn bản " + doc_id  +  " như sau " + modified_node["content"])
-                            origin_results[-1] = origin_results[-1] + "- Được " + modified_node["modified_purpose"] + " ở " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " văn bản " + modified_node["d_id"] + " ."
-                            m_path = session.read_transaction(get_modified_path, modified_node["d_id"], modified_node["id"])
-                            print(m_path)
+                            m_paths = session.read_transaction(get_modified_path, modified_node["d_id"], modified_node["id"])
+                            m_path = OrderedSet()
+                            for p in m_paths:
+                                m_path.add(p["bullet_type"] + " " + p["bullet"])
+                            m_path = " ".join(list(m_path))
+                            origin_results[-1] = origin_results[-1] + " (Được " + modified_node["modified_purpose"] + " ở " + m_path + " thuộc văn bản " + modified_node["d_id"] + ")."
                         # final_results.append(modified_nodes)
                     # for node in nodes_list:
                     #     final_results.append(node.metadata["d_id"] + " " + node.metadata["path"] + " | " + node.page_content.strip())
@@ -317,10 +326,10 @@ class RAGQwen25():
             generated_ids = self.model.generate(
                 model_inputs.input_ids,
                 max_new_tokens=4000,
-                temperature = 0.2,
+                temperature = 0.1,
                 top_p=0.95,
-                top_k=20,
-                pad_token_id=self.tokenizer.eos_token_id
+                top_k=40,
+                do_sample = True
             )
             generated_ids = [
                 output_ids[len(input_ids):] for input_ids, output_ids in zip(model_inputs.input_ids, generated_ids)

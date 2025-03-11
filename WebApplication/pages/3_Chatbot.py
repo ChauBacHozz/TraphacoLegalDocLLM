@@ -3,14 +3,21 @@ import time
 from backend.RAGQwenModel import RAGQwen
 import os
 
-st.title("Legal chatbot LLM")
-# @st.cache_resource
-# def get_model():
-#     # Create a model of the specified type
-#     return RAGQwen()
+col1, col2 = st.columns([10, 1])
 
-# with st.spinner("Loading RAG model"):
-#     rag_model = get_model()
+with col1:
+    st.title("Legal chatbot LLM")
+
+with col2:
+    if st.button('🤖', use_container_width=True):
+        print("Check")
+
+@st.dialog("LLM Setting")
+def model_setting(rag_model):
+
+    if st.button("Save"):
+        print("SAVED")
+
 
 def display_tokens(token_stream, container):
     """Display tokens one by one in the Streamlit app."""
