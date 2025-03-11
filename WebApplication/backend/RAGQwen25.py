@@ -92,6 +92,7 @@ class RAGQwen25():
         self.temperature = temperature
         self.top_p=top_p
         self.top_k=top_k
+        
 
     def load_faiss_and_data(self, index_path, path_index_path, data_path, metadata_path):
         index = faiss.read_index(index_path)

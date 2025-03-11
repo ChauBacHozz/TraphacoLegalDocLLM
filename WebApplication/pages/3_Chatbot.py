@@ -21,7 +21,7 @@ else:
 
 @st.dialog("LLM Setting", width="large")
 def model_setting(rag_model):
-    left_col, right_col = st.columns([3, 8])
+    left_col, right_col = st.columns([4, 10])
     with left_col:
         # Define parameters in a loop to avoid repetition
         params = ["Max New Tokens", "Temperature", "Top P", "Top K"]
@@ -47,11 +47,27 @@ def model_setting(rag_model):
         model_sys_prompt = rag_model.system_prompt
         model_template = rag_model.template
         
-        system_prompt = st.text_area(label = "System prompt", height = 80, value = model_sys_prompt)
-        template = st.text_area(label = "Template", height = 360, value = model_template)
+        system_prompt = st.text_area(label = "System prompt", height = 90, value = model_sys_prompt)
+        template = st.text_area(label = "Template", height = 350, value = model_template)
 
         if st.button("Save", use_container_width=True):
-            print("SAVED")
+            saved_success = True
+            if int(max_tokens) and float(temperature) and float(top_p) and float(top_k):
+                # Save params to rag model
+                rag_model.set_control_params(int(max_tokens), float(temperature), float(top_p), float(top_k))
+
+                rag_model.system_prompt = system_prompt
+                if "{context}" in template and "{question}" in template
+                    rag_model.template = template
+                else:
+                    print("ERRORRRR")
+                    saved_success = False
+            else:
+                saved_success = False
+
+            if saved_success:
+                st.rerun()
+            
 
 
 col1, col2 = st.columns([10, 1])
