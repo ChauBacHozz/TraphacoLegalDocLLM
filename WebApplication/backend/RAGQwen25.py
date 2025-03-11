@@ -30,10 +30,10 @@ os.environ["USE_TF"] = "0"
 # os.environ['HF_DATASETS_CACHE'] = PATH
 # os.environ['TORCH_HOME'] = PATH
 
-class RAGLlama():
+class RAGQwen25():
     def __init__(self, vector_db_path = "vectorstores/db_faiss", 
                  embedding_model = None,
-                 model_file = "AITeamVN/Vi-Qwen2-7B-RAG",
+                 model_file = "Qwen/Qwen2.5-7B-Instruct-1M",
                  ):
         
         self.vector_db_path = vector_db_path
@@ -56,6 +56,7 @@ class RAGLlama():
         - Chỉ trả lời dựa trên thông tin có trong ngữ cảnh được cung cấp, không sử dụng bất kỳ thông tin nào ngoài ngữ cảnh.
         - Phải nêu rõ câu trả lời được lấy từ nội dung của văn bản nào, đề mục như thế nào.
         - Nếu ngữ cảnh chứa câu trả lời, hãy cung cấp câu trả lời chính xác, đầy đủ, bao gồm toàn bộ nội dung liên quan từ ngữ cảnh (văn bản, đề mục, và các chi tiết cụ thể), không bỏ sót thông tin quan trọng.
+        - Nêu rõ thông tin bãi bỏ, sửa đổi, bổ sung cùng đề mục đó
         - Trích dẫn đầy đủ và chính xác các văn bản, điều, khoản, hoặc đề mục được nêu trong ngữ cảnh để tránh thiếu sót.
         - Nếu ngữ cảnh không chứa câu trả lời, chỉ từ chối trả lời bằng cách nêu rõ không có thông tin, không suy luận hay bổ sung thêm.
 
@@ -167,7 +168,7 @@ class RAGLlama():
                              """
             result = tx.run(query_sub_info, d_id = doc_id, path = path)
             result = list(result)
-            return [Document(page_content=doc["m"]["content"], metadata={"d_id": doc["n"]["d_id"], "path": doc["n"]["path"]}) for doc in result if doc["n"]["path"] != path]
+            return [Document(page_content=doc["n"]["content"], metadata={"d_id": doc["n"]["d_id"], "path": doc["n"]["path"]}) for doc in result if doc["n"]["path"] != path]
         
         def get_sub_nodes_lv1(tx, doc_id, path):
             query_sub_info = """ MATCH (n:Doc_Node:Origin_Node {d_id: $d_id, path: $path})-[:CONTAIN]->(m:Doc_Node:Origin_Node {d_id: $d_id})
@@ -185,6 +186,15 @@ class RAGLlama():
             result = tx.run(query, d_id = doc_id, content = content)
             return [record["modifier"] for record in result] or []  # Ensure it returns an empty list
 
+        def get_modified_path(tx, doc_id, id):
+            query = """ 
+            MATCH p = (r:Modified_Node:R_Node {d_id: $d_id})-[*]->(c:Modified_Node {d_id: $d_id, id: $id})
+            WHERE Not (r)<-[]-()
+            RETURN p
+            """
+            result = tx.run(query, d_id = doc_id, id = id)
+            path = [record["p"] for record in result]
+            return path
         # Hồ sơ đề nghị điều chỉnh nội dung Chứng chỉ hành nghề dược gồm những gì?
 
         origin_results = []
@@ -198,9 +208,11 @@ class RAGLlama():
             origin_results.append(str(doc_id + " " + path + " | " + val))
             with self.driver.session() as session:
                 modified_nodes = session.read_transaction(get_modified_nodes, doc_id, val)
-                # for modified_node in modified_nodes:
-                    # modified_results.add(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"] + " nội dung thuộc văn bản " + doc_id + " như sau " + modified_node["content"])
-                    # origin_results[-1] = origin_results[-1] + "- Được " + modified_node["modified_purpose"] + " ở " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " văn bản " + modified_node["d_id"] + " .\n"
+                for modified_node in modified_nodes:
+                    modified_results.add(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"] + " nội dung thuộc văn bản " + doc_id + " như sau " + modified_node["content"])
+                    m_path = session.read_transaction(get_modified_path, modified_node["d_id"], modified_node["id"])
+                    print(m_path)
+                    origin_results[-1] = origin_results[-1] + "- Được " + modified_node["modified_purpose"] + " ở " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " văn bản " + modified_node["d_id"] + " .\n"
             #     final_results.append(modified_nodes)
             if len(path) > 0:
                 # Get sub nodes
@@ -209,9 +221,11 @@ class RAGLlama():
                     for node in nodes_list:
                         origin_results[-1] = origin_results[-1] + "\n" + node.metadata["path"].split(" > ")[-1].split(" ")[0] + " " + node.page_content.strip()
                         modified_nodes = session.read_transaction(get_modified_nodes, node.metadata["d_id"], node.page_content)
-                        # for modified_node in modified_nodes:
-                            # modified_results.add(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"]  + " nội dung thuộc văn bản " + doc_id  +  " như sau " + modified_node["content"])
-                            # origin_results[-1] = origin_results[-1] + "- Được " + modified_node["modified_purpose"] + " ở " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " văn bản " + modified_node["d_id"] + " ."
+                        for modified_node in modified_nodes:
+                            modified_results.add(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"]  + " nội dung thuộc văn bản " + doc_id  +  " như sau " + modified_node["content"])
+                            origin_results[-1] = origin_results[-1] + "- Được " + modified_node["modified_purpose"] + " ở " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " văn bản " + modified_node["d_id"] + " ."
+                            m_path = session.read_transaction(get_modified_path, modified_node["d_id"], modified_node["id"])
+                            print(m_path)
                         # final_results.append(modified_nodes)
                     # for node in nodes_list:
                     #     final_results.append(node.metadata["d_id"] + " " + node.metadata["path"] + " | " + node.page_content.strip())
@@ -286,35 +300,13 @@ class RAGLlama():
             n_tokens += self.count_tokens_underthesea(context)
         
         context = "\n".join(context_list)
+        ic(context)
         print(f"😄 there are {n_tokens} tokens in context")
 
-        # print("\n\n\nCONTEXT:", context)
-        # print("\n\n")
-        refs = json.dumps(
-            {
-                "instructions": """Bạn là một AI chuyên xử lý tài liệu pháp lý Tiếng Việt nhiệt tình và trung thực. Hãy luôn trả lời một cách chính xác và chi tiết theo đúng cấu trúc yêu cầu. Khi trả lời câu hỏi liên quan đến các quy định pháp luật, bạn PHẢI tuân thủ nghiêm ngặt các nguyên tắc sau:
-                    - Chỉ trả lời dựa trên thông tin có trong ngữ cảnh được cung cấp, không sử dụng bất kỳ thông tin nào ngoài ngữ cảnh.
-                    - Phải nêu rõ câu trả lời được lấy từ nội dung của văn bản nào, đề mục như thế nào.
-                    - Nếu ngữ cảnh chứa câu trả lời, hãy cung cấp câu trả lời chính xác, đầy đủ, bao gồm toàn bộ nội dung liên quan từ ngữ cảnh (văn bản, đề mục, và các chi tiết cụ thể), không bỏ sót thông tin quan trọng.
-                    - Trích dẫn đầy đủ và chính xác các văn bản, điều, khoản, hoặc đề mục được nêu trong ngữ cảnh để tránh thiếu sót.
-                    - Nếu ngữ cảnh không chứa câu trả lời, chỉ từ chối trả lời bằng cách nêu rõ không có thông tin, không suy luận hay bổ sung thêm.
 
-                    Trả lời câu hỏi dựa trên ngữ cảnh""",
-                "documents": context_list
-            },
-            indent=2,
-            ensure_ascii=False,
-        )
         conversation = [{"role": "system", "content": self.system_prompt }]
         conversation.append({"role": "user", "content": self.template.format(context = context, question = prompt)})
-        # ic(refs)
-        # conversation = [
-        # # Here you can still set up system prompts.
-        # # Also tell the model how to use additional reference information.
-        #     {"role": "system", "content": ""},
-        #     {"role": "refs", "content": refs},
-        #     {"role": "user", "content": "Chỉ sử dụng ngữ cảnh, KHÔNG thêm nội dung, trả lời câu hỏi sau:" + prompt + "LƯU Ý: KHÔNG SUY LUẬN HAY BỔ SUNG THÔNG TIN, GIỮ NGUYÊN ĐỀ MỤC TRONG NGỮ CẢNH"},
-        # ]
+
         with torch.inference_mode():
             text = self.tokenizer.apply_chat_template(
                 conversation,
@@ -325,9 +317,9 @@ class RAGLlama():
             generated_ids = self.model.generate(
                 model_inputs.input_ids,
                 max_new_tokens=4000,
-                temperature = 0.1,
+                temperature = 0.2,
                 top_p=0.95,
-                top_k=40,
+                top_k=20,
                 pad_token_id=self.tokenizer.eos_token_id
             )
             generated_ids = [

@@ -1,6 +1,6 @@
 import streamlit as st
 from sentence_transformers import SentenceTransformer
-from backend.RAGLlamaModel import RAGLlama
+from backend.RAGQwen25 import RAGQwen25
 import os
 
 import os
@@ -21,7 +21,7 @@ EMBEDDING_MODEL_NAME = "dangvantuan/vietnamese-document-embedding"
 
 @st.cache_resource
 def get_model():
-    return RAGLlama()
+    return RAGQwen25()
 
         
 if "rag_model" not in st.session_state:
