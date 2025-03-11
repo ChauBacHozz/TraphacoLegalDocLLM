@@ -68,7 +68,16 @@ class RAGQwen25():
         Trả lời một cách chi tiết câu hỏi sau: {question}
 
         ### Trả lời:'''        # Khởi tạo mô hình LLM và tokenizer
+
+        # Khởi tạo các tham số điều khiển đầu ra của mô hình
+        self.max_new_tokens=4000
+        self.temperature = 0.1
+        self.top_p=0.95
+        self.top_k=40
+
         self.model, self.tokenizer = self.load_huggingface_model(self.model_file)
+
+
         # WINDOWS_IP = "28.11.5.39"
         # URI = f"bolt://{WINDOWS_IP}:7687"
         # USERNAME = "neo4j"
@@ -77,6 +86,13 @@ class RAGQwen25():
         USERNAME = "neo4j"
         PASSWORD = "tDJXOWtq9GSTnXqQyVFmb2xiR3GREbxnU8m9MxxWHwU"
         self.driver = GraphDatabase.driver(URI, auth=(USERNAME, PASSWORD))
+
+    def set_control_params(self, max_new_tokens, temperature, top_p, top_k):
+        self.max_new_tokens=max_new_tokens
+        self.temperature = temperature
+        self.top_p=top_p
+        self.top_k=top_k
+
     def load_faiss_and_data(self, index_path, path_index_path, data_path, metadata_path):
         index = faiss.read_index(index_path)
         path_index = faiss.read_index(path_index_path)
@@ -325,10 +341,10 @@ class RAGQwen25():
 
             generated_ids = self.model.generate(
                 model_inputs.input_ids,
-                max_new_tokens=4000,
-                temperature = 0.1,
-                top_p=0.95,
-                top_k=40,
+                max_new_tokens=self.max_new_tokens,
+                temperature = self.temperature,
+                top_p=self.top_p,
+                top_k=self.top_k,
                 do_sample = True
             )
             generated_ids = [
