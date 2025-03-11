@@ -57,7 +57,7 @@ def model_setting(rag_model):
                 rag_model.set_control_params(int(max_tokens), float(temperature), float(top_p), float(top_k))
 
                 rag_model.system_prompt = system_prompt
-                if "{context}" in template and "{question}" in template
+                if "{context}" in template and "{question}" in template:
                     rag_model.template = template
                 else:
                     print("ERRORRRR")
