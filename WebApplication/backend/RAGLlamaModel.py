@@ -205,7 +205,7 @@ class RAGLlama():
             if len(path) > 0:
                 # Get sub nodes
                 with self.driver.session() as session:
-                    nodes_list = session.read_transaction(get_sub_nodes_lv1, doc_id, path)
+                    nodes_list = session.read_transaction(get_sub_nodes, doc_id, path)
                     for node in nodes_list:
                         origin_results[-1] = origin_results[-1] + "\n" + node.metadata["path"].split(" > ")[-1].split(" ")[0] + " " + node.page_content.strip()
                         modified_nodes = session.read_transaction(get_modified_nodes, node.metadata["d_id"], node.page_content)
