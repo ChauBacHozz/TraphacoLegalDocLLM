@@ -1,8 +1,6 @@
 from langchain.vectorstores import FAISS
 from langchain.embeddings import GPT4AllEmbeddings
-from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline, AutoProcessor, Gemma3ForConditionalGeneration
-from transformers import AutoConfig
-from transformers import pipeline
+from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 from langchain_community.embeddings import GPT4AllEmbeddings
 from langchain_community.vectorstores import FAISS
 from transformers import BitsAndBytesConfig
@@ -14,7 +12,7 @@ import faiss
 import numpy as np
 import pickle
 import os
-# from underthesea import word_tokenize
+from underthesea import word_tokenize
 from langchain_community.vectorstores import Neo4jVector
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.schema import Document
@@ -22,6 +20,7 @@ from langchain.vectorstores.utils import maximal_marginal_relevance
 from neo4j import GraphDatabase
 from icecream import ic
 from ordered_set import OrderedSet
+import json
 import os
 os.environ["USE_TORCH"] = "1"
 os.environ["USE_TF"] = "0"
@@ -31,10 +30,10 @@ os.environ["USE_TF"] = "0"
 # os.environ['HF_DATASETS_CACHE'] = PATH
 # os.environ['TORCH_HOME'] = PATH
 
-class RAGGemma():
+class RAGQwen25():
     def __init__(self, vector_db_path = "vectorstores/db_faiss", 
                  embedding_model = None,
-                 model_file = "unsloth/gemma-3-12b-it-unsloth-bnb-4bit",
+                 model_file = "Qwen/Qwen2.5-7B-Instruct-1M",
                  ):
         
         self.vector_db_path = vector_db_path
@@ -52,34 +51,49 @@ class RAGGemma():
         # Load the FAISS vector database with the embedding model
         # self.db = FAISS.load_local(folder_path=vector_db_path, embeddings=self.embedding_model, allow_dangerous_deserialization = True)
 
-        self.template = '''Bạn là một trợ lí Tiếng Việt nhiệt tình và trung thực. Hãy luôn trả lời một cách hữu ích nhất có thể. Hãy tuân thủ nghiêm ngặt các nguyên tắc sau:
-
-        - Chỉ trả lời dựa trên thông tin có trong ngữ cảnh được cung cấp ({context}), không sử dụng bất kỳ thông tin nào ngoài ngữ cảnh.
+        self.system_prompt = "Bạn là một AI chuyên xử lý tài liệu pháp lý Tiếng Việt nhiệt tình và trung thực. Hãy luôn trả lời một cách chính xác và chi tiết theo đúng cấu trúc yêu cầu."
+        self.template = '''Khi trả lời câu hỏi liên quan đến các quy định pháp luật, bạn PHẢI tuân thủ nghiêm ngặt các nguyên tắc sau:
+        - Chỉ trả lời dựa trên thông tin có trong ngữ cảnh được cung cấp, không sử dụng bất kỳ thông tin nào ngoài ngữ cảnh.
         - Phải nêu rõ câu trả lời được lấy từ nội dung của văn bản nào, đề mục như thế nào.
         - Nếu ngữ cảnh chứa câu trả lời, hãy cung cấp câu trả lời chính xác, đầy đủ, bao gồm toàn bộ nội dung liên quan từ ngữ cảnh (văn bản, đề mục, và các chi tiết cụ thể), không bỏ sót thông tin quan trọng.
-        - Trích dẫn đầy đủ và chính xác các văn bản, điều khoản, khoản, hoặc đề mục được nêu trong ngữ cảnh để tránh thiếu sót.
+        - Nêu rõ thông tin bãi bỏ, sửa đổi, bổ sung cùng đề mục đó
+        - Trích dẫn đầy đủ và chính xác các văn bản, điều, khoản, hoặc đề mục được nêu trong ngữ cảnh để tránh thiếu sót.
         - Nếu ngữ cảnh không chứa câu trả lời, chỉ từ chối trả lời bằng cách nêu rõ không có thông tin, không suy luận hay bổ sung thêm.
 
-        Hãy trả lời câu hỏi sau dựa trên ngữ cảnh:
+        Trả lời câu hỏi dựa trên ngữ cảnh
+        ### Ngữ cảnh:
+        {context} 
 
-        ### Ngữ cảnh :
-        {context}
+        ### Câu hỏi:
+        Trả lời một cách chi tiết câu hỏi sau: {question}
 
-        ### Câu hỏi :
-        {question}? Các nội dung này có bị sửa đổi, bãi bỏ, thêm không? Nếu có thì chỉ rõ văn bản nào, đề mục cụ thể?
+        ### Trả lời:'''        # Khởi tạo mô hình LLM và tokenizer
 
-        ### Trả lời :
-        - Nếu có thông tin: Dựa trên ngữ cảnh được cung cấp, {question} [đã bị sửa đổi/bãi bỏ/được thêm] bởi [văn bản cụ thể], tại [đề mục cụ thể], với nội dung chi tiết như sau: [trích dẫn đầy đủ nội dung liên quan từ ngữ cảnh].
-        - Nếu không có thông tin: Dựa trên ngữ cảnh được cung cấp, không có thông tin về việc {question} bị sửa đổi, bãi bỏ hay được thêm.'''
+        # Khởi tạo các tham số điều khiển đầu ra của mô hình
+        self.max_new_tokens=4000
+        self.temperature = 0.1
+        self.top_p=0.95
+        self.top_k=40
 
-        # Khởi tạo mô hình LLM và tokenizer
         self.model, self.tokenizer = self.load_huggingface_model(self.model_file)
-        WINDOWS_IP = "28.11.5.39"
+
+
+        # WINDOWS_IP = "28.11.5.39"
+        # URI = f"bolt://{WINDOWS_IP}:7687"
+        # USERNAME = "neo4j"
+        # PASSWORD = "phongthang2012"
         URI = "neo4j+s://13d9b8ff.databases.neo4j.io"
         USERNAME = "neo4j"
         PASSWORD = "tDJXOWtq9GSTnXqQyVFmb2xiR3GREbxnU8m9MxxWHwU"
-
         self.driver = GraphDatabase.driver(URI, auth=(USERNAME, PASSWORD))
+
+    def set_control_params(self, max_new_tokens, temperature, top_p, top_k):
+        self.max_new_tokens=max_new_tokens
+        self.temperature = temperature
+        self.top_p=top_p
+        self.top_k=top_k
+        
+
     def load_faiss_and_data(self, index_path, path_index_path, data_path, metadata_path):
         index = faiss.read_index(index_path)
         path_index = faiss.read_index(path_index_path)
@@ -100,9 +114,9 @@ class RAGGemma():
         )     
 
         
-    # def count_tokens_underthesea(self, text):
-    #     tokens = word_tokenize(text, format="text").split()
-    #     return len(tokens)
+    def count_tokens_underthesea(self, text):
+        tokens = word_tokenize(text, format="text").split()
+        return len(tokens)
 
     def search_query_from_path(self, query: str, k = 3):
         """
@@ -272,8 +286,8 @@ class RAGGemma():
     
     def get_retrieval_data(self, query: str):
         # CHECK IF QUERY IS A HEADER OR NOT
-        res = self.search_query_from_path(query)
-        return res
+        origin_context, modified_context = self.search_query_from_path(query)
+        return origin_context, modified_context
     
     def load_huggingface_model(self,model_file):
         quantization_config = BitsAndBytesConfig(
@@ -283,15 +297,22 @@ class RAGGemma():
             bnb_4bit_use_double_quant=True,  # Sử dụng độ chính xác kép để lượng hóa kích hoạt
         )
         # quantization_config = BitsAndBytesConfig(load_in_8bit=True, llm_int8_threshold = 6.0)
-        # model = Gemma3ForConditionalGeneration.from_pretrained(model_file, device_map="auto")
-        # config = AutoConfig.from_pretrained(model_file)
-        # for key, value in vars(config.text_config).items():
-        #     setattr(config, key, value)
-        
-        model = Gemma3ForConditionalGeneration.from_pretrained(
-            model_file, device_map="auto"
-        ).eval()
-        tokenizer = AutoProcessor.from_pretrained(model_file)
+        model = AutoModelForCausalLM.from_pretrained(model_file, device_map="auto", quantization_config=quantization_config)
+        tokenizer = AutoTokenizer.from_pretrained(model_file)
+        # MODEL_DIR = "/kaggle/input/qwen-model/qwen-model"
+
+        # # Check if the model is available, if not, download
+        # if not os.path.exists(MODEL_DIR):
+        #     # Save it for future use
+        #     model.save_pretrained("qwen-model")
+        #     tokenizer.save_pretrained("qwen-model")
+
+        # else:
+        #     # Load from Kaggle Dataset
+        #     model = AutoModelForCausalLM.from_pretrained(MODEL_DIR)
+        #     tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR)
+
+        # print("Model loaded successfully!")
         return model, tokenizer
 
     
@@ -300,45 +321,36 @@ class RAGGemma():
         # origin_context.insert(0, "Nội dung gốc")
         # modified_context.insert(0, "Nội dung sửa đổi, bãi bỏ, bổ sung")
         context_list = origin_context + modified_context
-        # n_tokens = 0
-        # for context in context_list:
-        #     n_tokens += self.count_tokens_underthesea(context)
-        # print(f"😄 there are {n_tokens} tokens in context")
+        n_tokens = 0
+        for context in context_list:
+            n_tokens += self.count_tokens_underthesea(context)
+        
         context = "\n".join(context_list)
-        # print("\n\n\nCONTEXT:", context)
-        # print("\n\n"), 
-        messages = [
-            {
-                "role": "system",
-                "content": [{"type": "text", "text": '''Bạn là một trợ lí Tiếng Việt nhiệt tình và trung thực. Hãy luôn trả lời một cách hữu ích nhất có thể. Hãy tuân thủ nghiêm ngặt các nguyên tắc sau:
+        ic(context)
+        print(f"😄 there are {n_tokens} tokens in context")
 
-        - Chỉ trả lời dựa trên thông tin có trong ngữ cảnh được cung cấp ({context}), không sử dụng bất kỳ thông tin nào ngoài ngữ cảnh.
-        - Phải nêu rõ câu trả lời được lấy từ nội dung của văn bản nào, đề mục như thế nào.
-        - Nếu ngữ cảnh chứa câu trả lời, hãy cung cấp câu trả lời chính xác, đầy đủ, bao gồm toàn bộ nội dung liên quan từ ngữ cảnh (văn bản, đề mục, và các chi tiết cụ thể), không bỏ sót thông tin quan trọng.
-        - Trích dẫn đầy đủ và chính xác các văn bản, điều khoản, khoản, hoặc đề mục được nêu trong ngữ cảnh để tránh thiếu sót.
-        - Nếu ngữ cảnh không chứa câu trả lời, chỉ từ chối trả lời bằng cách nêu rõ không có thông tin, không suy luận hay bổ sung thêm.'''}]
-            },
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": "Ngữ cảnh:" + context},
-                    {"type": "text", "text": "Dựa trên ngữ cảnh đã cho, hãy trả lời câu hỏi sau: "+ prompt}
-                ]
-            }
-        ]
-        
-        # Get tokenized inputs and move to device directly
-        inputs = self.tokenizer.apply_chat_template(
-            messages, add_generation_prompt=True, tokenize=True,
-            return_dict=True, return_tensors="pt"
-        ).to(self.model.device, dtype=torch.bfloat16)
-        
-        input_len = inputs["input_ids"].shape[-1]
-        
+
+        conversation = [{"role": "system", "content": self.system_prompt }]
+        conversation.append({"role": "user", "content": self.template.format(context = context, question = prompt)})
+
         with torch.inference_mode():
-            generation = self.model.generate(**inputs, max_new_tokens=2040, do_sample=False)
-            generation = generation[0][input_len:]
-        
-        decoded = self.tokenizer.decode(generation, skip_special_tokens=True)
-        print("Decoded:", decoded)
-        return decoded
+            text = self.tokenizer.apply_chat_template(
+                conversation,
+                tokenize=False,
+                add_generation_prompt=True)
+            model_inputs = self.tokenizer(text,return_tensors="pt").to(self.model.device)
+
+            generated_ids = self.model.generate(
+                model_inputs.input_ids,
+                max_new_tokens=self.max_new_tokens,
+                temperature = self.temperature,
+                top_p=self.top_p,
+                top_k=self.top_k,
+                do_sample = True
+            )
+            generated_ids = [
+                output_ids[len(input_ids):] for input_ids, output_ids in zip(model_inputs.input_ids, generated_ids)
+            ]
+            response = self.tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
+            return response
+

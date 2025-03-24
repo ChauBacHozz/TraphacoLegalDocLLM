@@ -1,8 +1,6 @@
 from langchain.vectorstores import FAISS
 from langchain.embeddings import GPT4AllEmbeddings
-from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline, AutoProcessor, Gemma3ForConditionalGeneration
-from transformers import AutoConfig
-from transformers import pipeline
+from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 from langchain_community.embeddings import GPT4AllEmbeddings
 from langchain_community.vectorstores import FAISS
 from transformers import BitsAndBytesConfig
@@ -14,7 +12,7 @@ import faiss
 import numpy as np
 import pickle
 import os
-# from underthesea import word_tokenize
+from underthesea import word_tokenize
 from langchain_community.vectorstores import Neo4jVector
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.schema import Document
@@ -22,6 +20,7 @@ from langchain.vectorstores.utils import maximal_marginal_relevance
 from neo4j import GraphDatabase
 from icecream import ic
 from ordered_set import OrderedSet
+
 import os
 os.environ["USE_TORCH"] = "1"
 os.environ["USE_TF"] = "0"
@@ -31,10 +30,10 @@ os.environ["USE_TF"] = "0"
 # os.environ['HF_DATASETS_CACHE'] = PATH
 # os.environ['TORCH_HOME'] = PATH
 
-class RAGGemma():
+class RAGQwen():
     def __init__(self, vector_db_path = "vectorstores/db_faiss", 
                  embedding_model = None,
-                 model_file = "unsloth/gemma-3-12b-it-unsloth-bnb-4bit",
+                 model_file = "meta-llama/Meta-Llama-3-8B",
                  ):
         
         self.vector_db_path = vector_db_path
@@ -52,33 +51,48 @@ class RAGGemma():
         # Load the FAISS vector database with the embedding model
         # self.db = FAISS.load_local(folder_path=vector_db_path, embeddings=self.embedding_model, allow_dangerous_deserialization = True)
 
-        self.template = '''Bạn là một trợ lí Tiếng Việt nhiệt tình và trung thực. Hãy luôn trả lời một cách hữu ích nhất có thể. Hãy tuân thủ nghiêm ngặt các nguyên tắc sau:
+        self.system_prompt = "Bạn là một AI chuyên xử lý tài liệu pháp lý Tiếng Việt nhiệt tình và trung thực. Hãy luôn trả lời một cách chính xác và chi tiết theo đúng cấu trúc yêu cầu."
 
-        - Chỉ trả lời dựa trên thông tin có trong ngữ cảnh được cung cấp ({context}), không sử dụng bất kỳ thông tin nào ngoài ngữ cảnh.
-        - Phải nêu rõ câu trả lời được lấy từ nội dung của văn bản nào, đề mục như thế nào.
-        - Nếu ngữ cảnh chứa câu trả lời, hãy cung cấp câu trả lời chính xác, đầy đủ, bao gồm toàn bộ nội dung liên quan từ ngữ cảnh (văn bản, đề mục, và các chi tiết cụ thể), không bỏ sót thông tin quan trọng.
-        - Trích dẫn đầy đủ và chính xác các văn bản, điều khoản, khoản, hoặc đề mục được nêu trong ngữ cảnh để tránh thiếu sót.
-        - Nếu ngữ cảnh không chứa câu trả lời, chỉ từ chối trả lời bằng cách nêu rõ không có thông tin, không suy luận hay bổ sung thêm.
+        self.template = '''Khi trả lời câu hỏi liên quan đến các quy định pháp luật, bạn PHẢI tuân thủ nghiêm ngặt các nguyên tắc sau:
 
-        Hãy trả lời câu hỏi sau dựa trên ngữ cảnh:
+        1. PHẢI giữ nguyên cấu trúc đề mục chính xác như trong văn bản gốc (ví dụ: "Nghị định số/năm/NĐ-CP chương X > mục Y > điều Z > khoản N > điểm M"). Không được rút gọn hoặc thay đổi định dạng này.
 
-        ### Ngữ cảnh :
-        {context}
+        2. PHẢI hiển thị rõ ràng nội dung bị bãi bỏ, sửa đổi hoặc bổ sung bằng cách:
+        - Đối với nội dung bị bãi bỏ: Sử dụng định dạng **bôi đậm** và ghi rõ "**đã bị bãi bỏ bởi [số văn bản] [thời điểm bãi bỏ]**"
+        - Đối với nội dung được sửa đổi: Sử dụng định dạng *in nghiêng* cho nội dung cũ, sau đó ghi rõ "*đã được sửa đổi thành [nội dung mới] bởi [số văn bản] [thời điểm sửa đổi]*"
+        - Đối với nội dung được bổ sung: Sử dụng định dạng __gạch chân__ và ghi rõ "__đã được bổ sung bởi [số văn bản] [thời điểm bổ sung]__"
 
-        ### Câu hỏi :
-        {question}? Các nội dung này có bị sửa đổi, bãi bỏ, thêm không? Nếu có thì chỉ rõ văn bản nào, đề mục cụ thể?
+        3. PHẢI sao chép chính xác mọi đề mục và nội dung trong ngữ cảnh được cung cấp. Không được tóm tắt hoặc diễn giải lại nội dung.
 
-        ### Trả lời :
-        - Nếu có thông tin: Dựa trên ngữ cảnh được cung cấp, {question} [đã bị sửa đổi/bãi bỏ/được thêm] bởi [văn bản cụ thể], tại [đề mục cụ thể], với nội dung chi tiết như sau: [trích dẫn đầy đủ nội dung liên quan từ ngữ cảnh].
-        - Nếu không có thông tin: Dựa trên ngữ cảnh được cung cấp, không có thông tin về việc {question} bị sửa đổi, bãi bỏ hay được thêm.'''
+        4. PHẢI sử dụng đúng định dạng markdown:
+        - Đối với nội dung bị bãi bỏ: sử dụng **hai dấu sao ở đầu và cuối**
+        - Đối với nội dung được sửa đổi: sử dụng *một dấu sao ở đầu và cuối*
+        - Đối với nội dung được bổ sung: sử dụng __hai dấu gạch dưới ở đầu và cuối__
 
-        # Khởi tạo mô hình LLM và tokenizer
+        5. PHẢI luôn bắt đầu câu trả lời bằng cách sao chép chính xác cấu trúc đề mục từ ngữ cảnh được cung cấp.
+
+        6. Kết thúc câu trả lời bằng việc tóm tắt những thay đổi quan trọng nhất từ các văn bản sửa đổi, bổ sung (nếu có).
+
+        KHÔNG ĐƯỢC thêm bất kỳ nội dung nào ngoài các nội dung trong ngữ cảnh được cung cấp.
+        KHÔNG ĐƯỢC thay đổi hoặc rút gọn cấu trúc đề mục.
+        KHÔNG ĐƯỢC thay đổi văn phong hoặc cách diễn đạt của văn bản gốc.
+
+        Hãy trả lời câu hỏi dựa trên ngữ cảnh:
+        ### Ngữ cảnh:
+        {context} 
+
+        ### Câu hỏi:
+        {question}
+
+        ### Trả lời:'''        # Khởi tạo mô hình LLM và tokenizer
         self.model, self.tokenizer = self.load_huggingface_model(self.model_file)
-        WINDOWS_IP = "28.11.5.39"
+        # WINDOWS_IP = "28.11.5.39"
+        # URI = f"bolt://{WINDOWS_IP}:7687"
+        # USERNAME = "neo4j"
+        # PASSWORD = "phongthang2012"
         URI = "neo4j+s://13d9b8ff.databases.neo4j.io"
         USERNAME = "neo4j"
         PASSWORD = "tDJXOWtq9GSTnXqQyVFmb2xiR3GREbxnU8m9MxxWHwU"
-
         self.driver = GraphDatabase.driver(URI, auth=(USERNAME, PASSWORD))
     def load_faiss_and_data(self, index_path, path_index_path, data_path, metadata_path):
         index = faiss.read_index(index_path)
@@ -100,9 +114,9 @@ class RAGGemma():
         )     
 
         
-    # def count_tokens_underthesea(self, text):
-    #     tokens = word_tokenize(text, format="text").split()
-    #     return len(tokens)
+    def count_tokens_underthesea(self, text):
+        tokens = word_tokenize(text, format="text").split()
+        return len(tokens)
 
     def search_query_from_path(self, query: str, k = 3):
         """
@@ -173,14 +187,6 @@ class RAGGemma():
             result = list(result)
             return [Document(page_content=doc["n"]["content"], metadata={"d_id": doc["n"]["d_id"], "path": doc["n"]["path"]}) for doc in result if doc["n"]["path"] != path]
         
-        def get_sub_nodes_lv1(tx, doc_id, path):
-            query_sub_info = """ MATCH (n:Doc_Node:Origin_Node {d_id: $d_id, path: $path})-[:CONTAIN]->(m:Doc_Node:Origin_Node {d_id: $d_id})
-                                RETURN m ORDER BY elementId(m)
-                             """
-            result = tx.run(query_sub_info, d_id = doc_id, path = path)
-            result = list(result)
-            return [Document(page_content=doc["m"]["content"], metadata={"d_id": doc["m"]["d_id"], "path": doc["m"]["path"]}) for doc in result if doc["m"]["path"] != path]
-        
         def get_modified_nodes(tx, doc_id, content):
             query = """ 
             MATCH (modifier:Modified_Node)-[:MODIFIED]->(x:Origin_Node {d_id: $d_id, content: $content})
@@ -189,18 +195,6 @@ class RAGGemma():
             result = tx.run(query, d_id = doc_id, content = content)
             return [record["modifier"] for record in result] or []  # Ensure it returns an empty list
 
-        def get_modified_path(tx, doc_id, id):
-            query = """
-            MATCH path = (root:R_Node:Modified_Node {d_id: $d_id})-[:CONTAIN*]->(t:Modified_Node {d_id: $d_id, id: $id})
-            WHERE NOT (root)<-[]-()
-            UNWIND nodes(path) AS node
-            WITH node, head(nodes(path)) AS root_node 
-            WHERE node <> root_node  
-            RETURN DISTINCT node
-            """
-            result = tx.run(query, d_id = doc_id, id = id)
-            path = [record["node"] for record in result]
-            return path
         # Hồ sơ đề nghị điều chỉnh nội dung Chứng chỉ hành nghề dược gồm những gì?
 
         origin_results = []
@@ -216,28 +210,18 @@ class RAGGemma():
                 modified_nodes = session.read_transaction(get_modified_nodes, doc_id, val)
                 for modified_node in modified_nodes:
                     modified_results.add(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"] + " nội dung thuộc văn bản " + doc_id + " như sau " + modified_node["content"])
-                    m_paths = session.read_transaction(get_modified_path, modified_node["d_id"], modified_node["id"])
-                    m_path = OrderedSet()
-                    for p in m_paths:
-                        m_path.add(p["bullet_type"] + " " + p["bullet"])
-                    m_path = " ".join(list(m_path))
-                    origin_results[-1] = origin_results[-1] + " (Được " + modified_node["modified_purpose"] + " ở " + m_path + " thuộc văn bản " + modified_node["d_id"] + ")."
+                    origin_results[-1] = origin_results[-1] + " **Được " + modified_node["modified_purpose"] + " ở " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " văn bản " + modified_node["d_id"] + " .**"
             #     final_results.append(modified_nodes)
             if len(path) > 0:
                 # Get sub nodes
                 with self.driver.session() as session:
                     nodes_list = session.read_transaction(get_sub_nodes, doc_id, path)
                     for node in nodes_list:
-                        origin_results[-1] = origin_results[-1] + "\n" + node.metadata["path"].split(" > ")[-1].split(" ")[0] + " " + node.page_content.strip()
+                        origin_results.append(node.metadata["d_id"] + " " + node.metadata["path"] + " | " + node.page_content.strip())
                         modified_nodes = session.read_transaction(get_modified_nodes, node.metadata["d_id"], node.page_content)
                         for modified_node in modified_nodes:
                             modified_results.add(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"]  + " nội dung thuộc văn bản " + doc_id  +  " như sau " + modified_node["content"])
-                            m_paths = session.read_transaction(get_modified_path, modified_node["d_id"], modified_node["id"])
-                            m_path = OrderedSet()
-                            for p in m_paths:
-                                m_path.add(p["bullet_type"] + " " + p["bullet"])
-                            m_path = " ".join(list(m_path))
-                            origin_results[-1] = origin_results[-1] + " (Được " + modified_node["modified_purpose"] + " ở " + m_path + " thuộc văn bản " + modified_node["d_id"] + ")."
+                            origin_results[-1] = origin_results[-1] + " **Được " + modified_node["modified_purpose"] + " ở " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " văn bản " + modified_node["d_id"] + " .**"
                         # final_results.append(modified_nodes)
                     # for node in nodes_list:
                     #     final_results.append(node.metadata["d_id"] + " " + node.metadata["path"] + " | " + node.page_content.strip())
@@ -272,8 +256,8 @@ class RAGGemma():
     
     def get_retrieval_data(self, query: str):
         # CHECK IF QUERY IS A HEADER OR NOT
-        res = self.search_query_from_path(query)
-        return res
+        origin_context, modified_context = self.search_query_from_path(query)
+        return origin_context, modified_context
     
     def load_huggingface_model(self,model_file):
         quantization_config = BitsAndBytesConfig(
@@ -283,15 +267,22 @@ class RAGGemma():
             bnb_4bit_use_double_quant=True,  # Sử dụng độ chính xác kép để lượng hóa kích hoạt
         )
         # quantization_config = BitsAndBytesConfig(load_in_8bit=True, llm_int8_threshold = 6.0)
-        # model = Gemma3ForConditionalGeneration.from_pretrained(model_file, device_map="auto")
-        # config = AutoConfig.from_pretrained(model_file)
-        # for key, value in vars(config.text_config).items():
-        #     setattr(config, key, value)
-        
-        model = Gemma3ForConditionalGeneration.from_pretrained(
-            model_file, device_map="auto"
-        ).eval()
-        tokenizer = AutoProcessor.from_pretrained(model_file)
+        model = AutoModelForCausalLM.from_pretrained(model_file, device_map="auto", quantization_config=quantization_config)
+        tokenizer = AutoTokenizer.from_pretrained(model_file)
+        # MODEL_DIR = "/kaggle/input/qwen-model/qwen-model"
+
+        # # Check if the model is available, if not, download
+        # if not os.path.exists(MODEL_DIR):
+        #     # Save it for future use
+        #     model.save_pretrained("qwen-model")
+        #     tokenizer.save_pretrained("qwen-model")
+
+        # else:
+        #     # Load from Kaggle Dataset
+        #     model = AutoModelForCausalLM.from_pretrained(MODEL_DIR)
+        #     tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR)
+
+        # print("Model loaded successfully!")
         return model, tokenizer
 
     
@@ -300,45 +291,34 @@ class RAGGemma():
         # origin_context.insert(0, "Nội dung gốc")
         # modified_context.insert(0, "Nội dung sửa đổi, bãi bỏ, bổ sung")
         context_list = origin_context + modified_context
-        # n_tokens = 0
-        # for context in context_list:
-        #     n_tokens += self.count_tokens_underthesea(context)
-        # print(f"😄 there are {n_tokens} tokens in context")
+        n_tokens = 0
+        for context in context_list:
+            n_tokens += self.count_tokens_underthesea(context)
+        
         context = "\n".join(context_list)
-        # print("\n\n\nCONTEXT:", context)
-        # print("\n\n"), 
-        messages = [
-            {
-                "role": "system",
-                "content": [{"type": "text", "text": '''Bạn là một trợ lí Tiếng Việt nhiệt tình và trung thực. Hãy luôn trả lời một cách hữu ích nhất có thể. Hãy tuân thủ nghiêm ngặt các nguyên tắc sau:
+        ic(context)
+        print(f"😄 there are {n_tokens} tokens in context")
 
-        - Chỉ trả lời dựa trên thông tin có trong ngữ cảnh được cung cấp ({context}), không sử dụng bất kỳ thông tin nào ngoài ngữ cảnh.
-        - Phải nêu rõ câu trả lời được lấy từ nội dung của văn bản nào, đề mục như thế nào.
-        - Nếu ngữ cảnh chứa câu trả lời, hãy cung cấp câu trả lời chính xác, đầy đủ, bao gồm toàn bộ nội dung liên quan từ ngữ cảnh (văn bản, đề mục, và các chi tiết cụ thể), không bỏ sót thông tin quan trọng.
-        - Trích dẫn đầy đủ và chính xác các văn bản, điều khoản, khoản, hoặc đề mục được nêu trong ngữ cảnh để tránh thiếu sót.
-        - Nếu ngữ cảnh không chứa câu trả lời, chỉ từ chối trả lời bằng cách nêu rõ không có thông tin, không suy luận hay bổ sung thêm.'''}]
-            },
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": "Ngữ cảnh:" + context},
-                    {"type": "text", "text": "Dựa trên ngữ cảnh đã cho, hãy trả lời câu hỏi sau: "+ prompt}
-                ]
-            }
-        ]
-        
-        # Get tokenized inputs and move to device directly
-        inputs = self.tokenizer.apply_chat_template(
-            messages, add_generation_prompt=True, tokenize=True,
-            return_dict=True, return_tensors="pt"
-        ).to(self.model.device, dtype=torch.bfloat16)
-        
-        input_len = inputs["input_ids"].shape[-1]
-        
+        # print("\n\n\nCONTEXT:", context)
+        # print("\n\n")
+        conversation = [{"role": "system", "content": self.system_prompt }]
+        conversation.append({"role": "user", "content": self.template.format(context = context, question = prompt)})
         with torch.inference_mode():
-            generation = self.model.generate(**inputs, max_new_tokens=2040, do_sample=False)
-            generation = generation[0][input_len:]
-        
-        decoded = self.tokenizer.decode(generation, skip_special_tokens=True)
-        print("Decoded:", decoded)
-        return decoded
+            text = self.tokenizer.apply_chat_template(
+                conversation,
+                tokenize=False,
+                add_generation_prompt=True)
+            model_inputs = self.tokenizer(text,return_tensors="pt").to(self.model.device)
+
+            generated_ids = self.model.generate(
+                model_inputs.input_ids,
+                max_new_tokens=4000,
+                temperature = 0.5,
+                top_p=0.95,
+                top_k=40,
+            )
+            generated_ids = [
+                output_ids[len(input_ids):] for input_ids, output_ids in zip(model_inputs.input_ids, generated_ids)
+            ]
+            response = self.tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
+            return response

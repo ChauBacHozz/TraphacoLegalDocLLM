@@ -1,7 +1,7 @@
 import streamlit as st
 from sentence_transformers import SentenceTransformer
 from backend.RAGQwen25 import RAGQwen25
-# from backend.RAGGemmaModel import RAGGemma
+from backend.RAGGemma import RAGGemma
 import os
 
 import os
@@ -22,7 +22,7 @@ EMBEDDING_MODEL_NAME = "dangvantuan/vietnamese-document-embedding"
 
 @st.cache_resource
 def get_model():
-    return RAGQwen25()
+    return RAGGemma()
 
         
 if "rag_model" not in st.session_state:

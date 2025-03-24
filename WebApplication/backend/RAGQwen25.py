@@ -12,7 +12,7 @@ import faiss
 import numpy as np
 import pickle
 import os
-from underthesea import word_tokenize
+# from underthesea import word_tokenize
 from langchain_community.vectorstores import Neo4jVector
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.schema import Document
@@ -114,9 +114,9 @@ class RAGQwen25():
         )     
 
         
-    def count_tokens_underthesea(self, text):
-        tokens = word_tokenize(text, format="text").split()
-        return len(tokens)
+    # def count_tokens_underthesea(self, text):
+    #     tokens = word_tokenize(text, format="text").split()
+    #     return len(tokens)
 
     def search_query_from_path(self, query: str, k = 3):
         """
@@ -299,20 +299,8 @@ class RAGQwen25():
         # quantization_config = BitsAndBytesConfig(load_in_8bit=True, llm_int8_threshold = 6.0)
         model = AutoModelForCausalLM.from_pretrained(model_file, device_map="auto", quantization_config=quantization_config)
         tokenizer = AutoTokenizer.from_pretrained(model_file)
-        # MODEL_DIR = "/kaggle/input/qwen-model/qwen-model"
-
-        # # Check if the model is available, if not, download
-        # if not os.path.exists(MODEL_DIR):
-        #     # Save it for future use
-        #     model.save_pretrained("qwen-model")
-        #     tokenizer.save_pretrained("qwen-model")
-
-        # else:
-        #     # Load from Kaggle Dataset
-        #     model = AutoModelForCausalLM.from_pretrained(MODEL_DIR)
-        #     tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR)
-
-        # print("Model loaded successfully!")
+        
+        
         return model, tokenizer
 
     
@@ -321,13 +309,13 @@ class RAGQwen25():
         # origin_context.insert(0, "Nội dung gốc")
         # modified_context.insert(0, "Nội dung sửa đổi, bãi bỏ, bổ sung")
         context_list = origin_context + modified_context
-        n_tokens = 0
-        for context in context_list:
-            n_tokens += self.count_tokens_underthesea(context)
+        # n_tokens = 0
+        # for context in context_list:
+        #     n_tokens += self.count_tokens_underthesea(context)
         
         context = "\n".join(context_list)
         ic(context)
-        print(f"😄 there are {n_tokens} tokens in context")
+        # print(f"😄 there are {n_tokens} tokens in context")
 
 
         conversation = [{"role": "system", "content": self.system_prompt }]
