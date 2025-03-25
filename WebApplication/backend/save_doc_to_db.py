@@ -448,9 +448,6 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver, doc_type = 1):
                 MERGE (b)-[:MODIFIED]->(a)
             """, root_id = modified_doc_id, id = c_node_id)
 
-    def create_modified_sub_graph(tx, modified_content):
-        pass
-
 
     def create_graph(tx, metadata):
         root_node_content = metadata["heading"]
