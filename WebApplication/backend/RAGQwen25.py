@@ -64,12 +64,12 @@ class RAGQwen25():
         - Trích dẫn đầy đủ và chính xác các văn bản, điều, khoản, hoặc đề mục được nêu trong ngữ cảnh để tránh thiếu sót.
         - Nếu ngữ cảnh không chứa câu trả lời, chỉ từ chối trả lời bằng cách nêu rõ không có thông tin, không suy luận hay bổ sung thêm.
 
-        Trả lời câu hỏi dựa trên ngữ cảnh
+        Trích xuất đoạn văn bản có liên quan nhất từ tài liệu ngữ cảnh sau
         ### Ngữ cảnh:
         {context} 
 
         ### Câu hỏi:
-        Trả lời một cách chi tiết câu hỏi sau: {question}
+        Trả lời một cách chi tiết câu hỏi sau: {question}. Chỉ trả về văn bản chính xác từ ngữ cảnh mà không cần sửa đổi, có thể xuống dòng giữa các đề mục.
 
         ### Trả lời:'''           # Khởi tạo mô hình LLM và tokenizer
 
