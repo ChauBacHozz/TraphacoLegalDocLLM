@@ -59,25 +59,26 @@ class RAGQwen25():
         self.template = '''Khi trả lời câu hỏi liên quan đến các quy định pháp luật, bạn PHẢI tuân thủ nghiêm ngặt các nguyên tắc sau:
         - Chỉ trả lời dựa trên thông tin có trong ngữ cảnh được cung cấp, không sử dụng bất kỳ thông tin nào ngoài ngữ cảnh.
         - Nêu rõ thông tin bãi bỏ, sửa đổi, bổ sung cùng đề mục đó
+        - Những đề mục nào bị bãi bỏ hãy loại nó ra khi trả lời, hoặc trích dẫn (bị bãi bỏ ở ...) ngay bên cạnh đề mục đó.
         - Nếu ngữ cảnh chứa câu trả lời, hãy cung cấp câu trả lời chính xác, đầy đủ, bao gồm toàn bộ nội dung liên quan từ ngữ cảnh (văn bản, đề mục, và các chi tiết cụ thể), không bỏ sót thông tin quan trọng.
         - Phải nêu rõ câu trả lời được lấy từ nội dung của văn bản nào, đề mục như thế nào.
         - Trích dẫn đầy đủ và chính xác các văn bản, điều, khoản, hoặc đề mục được nêu trong ngữ cảnh để tránh thiếu sót.
         - Nếu ngữ cảnh không chứa câu trả lời, chỉ từ chối trả lời bằng cách nêu rõ không có thông tin, không suy luận hay bổ sung thêm.
 
-        Trích xuất đoạn văn bản có liên quan nhất từ tài liệu ngữ cảnh sau
+        
         ### Ngữ cảnh:
         {context} 
 
         ### Câu hỏi:
-        Trả lời một cách chi tiết câu hỏi sau: {question}. Chỉ trả về văn bản chính xác từ ngữ cảnh mà không cần sửa đổi, có thể xuống dòng giữa các đề mục.
+        Trả lời một cách chi tiết câu hỏi sau: {question}.
 
         ### Trả lời:'''           # Khởi tạo mô hình LLM và tokenizer
 
         # Khởi tạo các tham số điều khiển đầu ra của mô hình
-        self.max_new_tokens=4000    
-        self.temperature = 0.4
+        self.max_new_tokens=5000    
+        self.temperature = 0.3
         self.top_p=0.95
-        self.top_k=40
+        self.top_k=30
 
         self.model, self.tokenizer, self.rerank_model = self.load_huggingface_model(self.model_file)
 
