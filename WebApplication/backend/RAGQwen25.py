@@ -58,10 +58,9 @@ class RAGQwen25():
         self.system_prompt = "Bạn là một AI chuyên xử lý tài liệu pháp lý Tiếng Việt nhiệt tình và trung thực. Hãy luôn trả lời một cách chính xác và chi tiết theo đúng cấu trúc yêu cầu."
         self.template = '''Khi trả lời câu hỏi liên quan đến các quy định pháp luật, bạn PHẢI tuân thủ nghiêm ngặt các nguyên tắc sau:
         - Chỉ trả lời dựa trên thông tin có trong ngữ cảnh được cung cấp, không sử dụng bất kỳ thông tin nào ngoài ngữ cảnh.
-        - Nêu rõ thông tin bãi bỏ, sửa đổi, bổ sung cùng đề mục đó
-        - Những đề mục nào bị bãi bỏ hãy loại nó ra khi trả lời, hoặc trích dẫn (bị bãi bỏ ở ...) ngay bên cạnh đề mục đó.
         - Nếu ngữ cảnh chứa câu trả lời, hãy cung cấp câu trả lời chính xác, đầy đủ, bao gồm toàn bộ nội dung liên quan từ ngữ cảnh (văn bản, đề mục, và các chi tiết cụ thể), không bỏ sót thông tin quan trọng.
         - Phải nêu rõ câu trả lời được lấy từ nội dung của văn bản nào, đề mục như thế nào.
+        - Nêu rõ thông tin bãi bỏ, sửa đổi, bổ sung bên cạnh đề mục đó
         - Trích dẫn đầy đủ và chính xác các văn bản, điều, khoản, hoặc đề mục được nêu trong ngữ cảnh để tránh thiếu sót.
         - Nếu ngữ cảnh không chứa câu trả lời, chỉ từ chối trả lời bằng cách nêu rõ không có thông tin, không suy luận hay bổ sung thêm.
 
@@ -76,7 +75,7 @@ class RAGQwen25():
 
         # Khởi tạo các tham số điều khiển đầu ra của mô hình
         self.max_new_tokens=5000    
-        self.temperature = 0.3
+        self.temperature = 0.2
         self.top_p=0.95
         self.top_k=30
 
@@ -310,11 +309,17 @@ class RAGQwen25():
         return origin_context, modified_context
     
     def load_huggingface_model(self,model_file):
+        # quantization_config = BitsAndBytesConfig(
+        #     load_in_4bit=True,  # Tải trọng số được lượng hóa trước theo định dạng 4 bit
+        #     bnb_4bit_quant_type="nf4",  # Sử dụng loại lượng hóa "nf4" cho trọng số 4 bit
+        #     bnb_4bit_compute_dtype=torch.bfloat16,  # Sử dụng torch.bfloat16 cho các phép tính trung gian
+        #     bnb_4bit_use_double_quant=True,  # Sử dụng độ chính xác kép để lượng hóa kích hoạt
+        # )
         quantization_config = BitsAndBytesConfig(
-            load_in_4bit=True,  # Tải trọng số được lượng hóa trước theo định dạng 4 bit
-            bnb_4bit_quant_type="nf4",  # Sử dụng loại lượng hóa "nf4" cho trọng số 4 bit
-            bnb_4bit_compute_dtype=torch.bfloat16,  # Sử dụng torch.bfloat16 cho các phép tính trung gian
-            bnb_4bit_use_double_quant=True,  # Sử dụng độ chính xác kép để lượng hóa kích hoạt
+            load_in_8bit=True,  # Load weights in 8-bit quantization
+            llm_int8_threshold=6.0,  # Default threshold for mixed precision
+            llm_int8_skip_modules=None,  # Skip no modules by default
+            llm_int8_enable_fp32_cpu_offload=False  # Keep computations on GPU
         )
         # quantization_config = BitsAndBytesConfig(load_in_8bit=True, llm_int8_threshold = 6.0)
         model = AutoModelForCausalLM.from_pretrained(model_file, device_map="auto", quantization_config=quantization_config)
