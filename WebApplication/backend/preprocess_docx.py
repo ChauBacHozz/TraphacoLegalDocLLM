@@ -251,7 +251,8 @@ def normalize_appendix_text_bullets(extract_text, appendix_heading_ids):
 
             if is_heading(text) == False and last_heading == False:
                 last_heading = False
-                bullets[-1] = bullets[-1] + "\n" + text
+                if len(bullets) > 0:
+                    bullets[-1] = bullets[-1] + "\n" + text
                 continue
         for bullet in bullets:
             if len(bullet.strip()) > 0:

@@ -17,10 +17,10 @@ from stqdm import stqdm
 import re
 from neo4j import GraphDatabase
 
-WINDOWS_IP = "28.11.5.39"
-URI = f"bolt://{WINDOWS_IP}:7687"
+# WINDOWS_IP = "28.11.5.39"
+URI = "neo4j+s://13d9b8ff.databases.neo4j.io"
 USERNAME = "neo4j"
-PASSWORD = "phongthang2012"
+PASSWORD = "tDJXOWtq9GSTnXqQyVFmb2xiR3GREbxnU8m9MxxWHwU"
 
 driver = GraphDatabase.driver(URI, auth=(USERNAME, PASSWORD))
 # PATH = 'D:/VS_Workspace/LLM/.cache'
