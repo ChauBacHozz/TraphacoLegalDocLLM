@@ -254,14 +254,20 @@ def save_modified_doc_to_db(new_texts, new_metadata, driver, doc_type = 1):
             if match.split(" ")[0].lower() not in lst:
                 tmp_path = path
                 for i in range(len(lst)):
-                    tmp_path = tmp_path[next(reversed(tmp_path))]
+                    try:
+                        tmp_path = tmp_path[next(reversed(tmp_path))]
+                    except:
+                        break
                 tmp_path[f"{match}"] = OrderedDict()
                 lst.append(match.split(" ")[0].lower())
             else:
                 index = lst.index(match.split(" ")[0].lower())
                 tmp_path = path
                 for i in range(index):
-                    tmp_path = tmp_path[next(reversed(tmp_path))]
+                    try:
+                        tmp_path = tmp_path[next(reversed(tmp_path))]
+                    except:
+                        break
                 tmp_path[f"{match}"] = OrderedDict()
         flattened_tree = flatten_tree(path)
         return flattened_tree

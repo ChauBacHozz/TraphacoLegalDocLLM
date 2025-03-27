@@ -64,12 +64,12 @@ class RAGQwen25():
         - Trích dẫn đầy đủ và chính xác các văn bản, điều, khoản, hoặc đề mục được nêu trong ngữ cảnh để tránh thiếu sót.
         - Nếu ngữ cảnh không chứa câu trả lời, chỉ từ chối trả lời bằng cách nêu rõ không có thông tin, không suy luận hay bổ sung thêm.
 
-        
+        Trích xuất đoạn văn bản có liên quan nhất từ tài liệu ngữ cảnh sau
         ### Ngữ cảnh:
         {context} 
 
         ### Câu hỏi:
-        Trả lời một cách chi tiết câu hỏi sau: {question}.
+        Trả lời một cách chi tiết câu hỏi sau: {question}. Chỉ trả về văn bản chính xác từ ngữ cảnh mà không cần sửa đổi, có thể xuống dòng giữa các đề mục. Nêu rõ về nội dung bãi bỏ, sửa đổi bổ sung.
 
         ### Trả lời:'''           # Khởi tạo mô hình LLM và tokenizer
 
@@ -254,7 +254,8 @@ class RAGQwen25():
                     for p in m_paths:
                         m_path.add(p["bullet_type"] + " " + p["bullet"])
                     m_path = " ".join(list(m_path))
-                    origin_results[-1] = origin_results[-1] + " (Được " + modified_node["modified_purpose"] + " ở " + m_path + " thuộc văn bản " + modified_node["d_id"] + ")."
+                    origin_results[-1] = origin_results[-1].rstrip(";")
+                    origin_results[-1] = origin_results[-1] + " (Được " + modified_node["modified_purpose"] + " ở " + m_path + " thuộc văn bản " + modified_node["d_id"] + ");"
             #     final_results.append(modified_nodes)
             if len(path) > 0:
                 # Get sub nodes
@@ -270,7 +271,8 @@ class RAGQwen25():
                             for p in m_paths:
                                 m_path.add(p["bullet_type"] + " " + p["bullet"])
                             m_path = " ".join(list(m_path))
-                            origin_results[-1] = origin_results[-1] + " (Được " + modified_node["modified_purpose"] + " ở " + m_path + " thuộc văn bản " + modified_node["d_id"] + ")."
+                            origin_results[-1] = origin_results[-1].rstrip(";")
+                            origin_results[-1] = origin_results[-1] + " (Được " + modified_node["modified_purpose"] + " ở " + m_path + " thuộc văn bản " + modified_node["d_id"] + ");"
                         # final_results.append(modified_nodes)
                     # for node in nodes_list:
                     #     final_results.append(node.metadata["d_id"] + " " + node.metadata["path"] + " | " + node.page_content.strip())
@@ -356,8 +358,8 @@ class RAGQwen25():
         # for context in context_list:
         #     n_tokens += self.count_tokens_underthesea(context)
         
+        ic(context_list)
         context = "\n".join(context_list)
-        ic(context)
         # print(f"😄 there are {n_tokens} tokens in context")
 
 
