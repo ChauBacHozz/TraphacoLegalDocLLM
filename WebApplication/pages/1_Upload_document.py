@@ -18,11 +18,11 @@ import re
 from neo4j import GraphDatabase
 
 # WINDOWS_IP = "28.11.5.39"
-URI = "neo4j+s://13d9b8ff.databases.neo4j.io"
-USERNAME = "neo4j"
-PASSWORD = "tDJXOWtq9GSTnXqQyVFmb2xiR3GREbxnU8m9MxxWHwU"
+# URI = "neo4j+s://13d9b8ff.databases.neo4j.io"
+# USERNAME = "neo4j"
+# PASSWORD = "tDJXOWtq9GSTnXqQyVFmb2xiR3GREbxnU8m9MxxWHwU"
 
-driver = GraphDatabase.driver(URI, auth=(USERNAME, PASSWORD))
+driver = st.session_state.driver
 # PATH = 'D:/VS_Workspace/LLM/.cache'
 # os.environ['TRANSFORMERS_CACHE'] = PATH
 # os.environ['HF_HOME'] = PATH

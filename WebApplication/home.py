@@ -1,6 +1,8 @@
 import streamlit as st
 from sentence_transformers import SentenceTransformer
 from backend.RAGQwen25 import RAGQwen25
+from neo4j import GraphDatabase
+
 # from backend.RAGGemmaModel import RAGGemma
 import os
 
@@ -32,6 +34,14 @@ if "rag_model" not in st.session_state:
 if "embedding_model" not in st.session_state:
     with st.spinner("Loading Embedding model"):
         st.session_state.embedding_model = st.session_state.rag_model.embedding_model
+
+if "driver" not in st.session_state:
+    with st.spinner("Loading driver"):
+        URI = "neo4j+s://13d9b8ff.databases.neo4j.io"
+        USERNAME = "neo4j"
+        PASSWORD = "tDJXOWtq9GSTnXqQyVFmb2xiR3GREbxnU8m9MxxWHwU"
+
+        st.session_state.driver = GraphDatabase.driver(URI, auth=(USERNAME, PASSWORD))
 
 st.write("Welcome to web app")
 
