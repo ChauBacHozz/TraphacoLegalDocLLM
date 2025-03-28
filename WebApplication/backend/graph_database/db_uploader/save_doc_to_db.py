@@ -9,7 +9,7 @@ from collections import OrderedDict
 import re
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
-from WebApplication.backend.preprocessing.preprocess_docx import (normalize_bullets,
+from backend.graph_database.preprocessing.preprocess_docx import (normalize_bullets,
                              convert_text_list_to_tree,
                              flatten_tree,
                              preprocess_chunks)

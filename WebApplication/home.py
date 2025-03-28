@@ -1,6 +1,6 @@
 import streamlit as st
 from sentence_transformers import SentenceTransformer
-from backend.RAGQwen25 import RAGQwen25
+from backend.models.RAGQwen25 import RAGQwen25
 from neo4j import GraphDatabase
 
 # from backend.RAGGemmaModel import RAGGemma
@@ -40,7 +40,7 @@ if "driver" not in st.session_state:
         URI = "neo4j+s://13d9b8ff.databases.neo4j.io"
         USERNAME = "neo4j"
         PASSWORD = "tDJXOWtq9GSTnXqQyVFmb2xiR3GREbxnU8m9MxxWHwU"
-
+        print("CHECKKKKKK")
         st.session_state.driver = GraphDatabase.driver(URI, auth=(USERNAME, PASSWORD))
 
 st.write("Welcome to web app")
