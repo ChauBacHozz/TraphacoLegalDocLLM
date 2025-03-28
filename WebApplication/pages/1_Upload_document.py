@@ -4,11 +4,11 @@ import numpy as np
 import docx
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from sentence_transformers import SentenceTransformer
-from backend.preprocess_docx import (extract_text, normalize_bullets, 
+from WebApplication.backend.preprocessing.preprocess_docx import (extract_text, normalize_bullets, 
                                      convert_text_list_to_tree, flatten_tree,
                                      preprocess_chunks, normalize_appendix_text_bullets,
                                      normalize_modified_text_bullets)
-from backend.save_doc_to_db import save_origin_doc_to_db, save_modified_doc_to_db
+from WebApplication.backend.graph_database.db_uploader.save_doc_to_db import save_origin_doc_to_db, save_modified_doc_to_db
 from icecream import ic
 from collections import OrderedDict
 import os

@@ -24,7 +24,7 @@ from collections import OrderedDict
 import json
 import os
 from pyvi import ViTokenizer
-
+from transformers import pipeline, set_seed
 
 os.environ["USE_TORCH"] = "1"
 os.environ["USE_TF"] = "0"
@@ -122,7 +122,7 @@ class RAGQwen25():
     #     tokens = word_tokenize(text, format="text").split()
     #     return len(tokens)
 
-    def search_query_from_path(self, query: str, k = 7):
+    def search_query_from_path(self, query: str, k = 5):
         """
         Perform a similarity search on the vector database.
         
@@ -181,21 +181,21 @@ class RAGQwen25():
             if final_dict_keys_lst[i-1] in final_dict_keys_lst[i]:
                 continue
             shorten_final_dict[final_dict_keys_lst[i]] = final_dict[final_dict_keys_lst[i]]
+        ic(shorten_final_dict)
 
         # Thực hiện rerank
-        tokenized_query = ViTokenizer.tokenize(query)
-        tokenized_sentences = [ViTokenizer.tokenize(sent) for sent in shorten_final_dict.values()]
+        # tokenized_query = ViTokenizer.tokenize(query)
+        # tokenized_sentences = [ViTokenizer.tokenize(sent) for sent in shorten_final_dict.values()]
 
-        tokenized_pairs = [[tokenized_query, sent] for sent in tokenized_sentences]
+        # tokenized_pairs = [[tokenized_query, sent] for sent in tokenized_sentences]
+        # scores = self.rerank_model.predict(tokenized_pairs)
+        # scores_dict = {}
 
-        scores = self.rerank_model.predict(tokenized_pairs)
-        scores_dict = {}
-        for i, key in enumerate(shorten_final_dict.keys()):
-            scores_dict[key] = scores[i]
+        # for i, key in enumerate(shorten_final_dict.keys()):
+        #     scores_dict[key] = scores[i]
 
-        shorten_final_dict = OrderedDict(shorten_final_dict)
-        shorten_final_dict = OrderedDict(sorted(shorten_final_dict.items(), reverse=True, key=lambda x: scores_dict[x[0]]))
-        ic(shorten_final_dict)
+        # shorten_final_dict = OrderedDict(shorten_final_dict)
+        # shorten_final_dict = OrderedDict(sorted(shorten_final_dict.items(), reverse=True, key=lambda x: scores_dict[x[0]]))
         # Làm giàu thông tin retrieval data
         def get_sub_nodes(tx, doc_id, path):
             query_sub_info = """ MATCH (n:Doc_Node {d_id: $d_id})
@@ -263,6 +263,7 @@ class RAGQwen25():
                     nodes_list = session.read_transaction(get_sub_nodes, doc_id, path)
                     for node in nodes_list:
                         origin_results[-1] = origin_results[-1] + "\n" + node.metadata["path"].split(" > ")[-1].split(" ")[0] + " " + node.page_content.strip()
+                        origin_results[-1] = origin_results[-1].rstrip(";") + ";"
                         modified_nodes = session.read_transaction(get_modified_nodes, node.metadata["d_id"], node.page_content)
                         for modified_node in modified_nodes:
                             modified_results.add(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"]  + " nội dung thuộc văn bản " + doc_id  +  " như sau " + modified_node["content"])
@@ -320,10 +321,10 @@ class RAGQwen25():
 
         rerank_model_id = 'itdainb/PhoRanker'
         
-        rerank_model = CrossEncoder(rerank_model_id, max_length=1024)
-
+        rerank_model = CrossEncoder(rerank_model_id, max_length=4000)
+        rerank_model.to("cpu")
         # For fp16 usage
-        rerank_model.model.half()
+        # rerank_model.model.half()
         return model, tokenizer, rerank_model
 
     
@@ -350,7 +351,7 @@ class RAGQwen25():
                 tokenize=False,
                 add_generation_prompt=True)
             model_inputs = self.tokenizer(text,return_tensors="pt").to(self.model.device)
-
+            set_seed(20)
             generated_ids = self.model.generate(
                 model_inputs.input_ids,
                 max_new_tokens=self.max_new_tokens,
