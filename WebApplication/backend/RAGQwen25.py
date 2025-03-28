@@ -122,7 +122,7 @@ class RAGQwen25():
     #     tokens = word_tokenize(text, format="text").split()
     #     return len(tokens)
 
-    def search_query_from_path(self, query: str, k = 3):
+    def search_query_from_path(self, query: str, k = 7):
         """
         Perform a similarity search on the vector database.
         
@@ -276,31 +276,9 @@ class RAGQwen25():
                         # final_results.append(modified_nodes)
                     # for node in nodes_list:
                     #     final_results.append(node.metadata["d_id"] + " " + node.metadata["path"] + " | " + node.page_content.strip())
-
-
-        # ic(final_results)
         modified_results = list(modified_results)
         return origin_results, modified_results
                         
-
-
-
-        # final_passages_full = []
-        # final_passages_path = []
-        # for passage in final_results:
-        #     if "path" in passage.metadata.keys():
-        #         if passage.metadata["path"]:
-        #             path = passage.metadata["path"]
-        #         else:
-        #             path = ""
-        #         final_passages_full.append(str(passage.metadata["d_id"]) + path + passage.page_content.strip())
-        #         final_passages_path.append(str(passage.metadata["d_id"]) + path)
-        #     else:
-        #         final_passages_full.append(str(passage.metadata["d_id"]) + passage.page_content.strip())
-        #         final_passages_path.append(str(passage.metadata["d_id"]))
-        # return final_passages_full, final_passages_path # Combine with keyword-based retrieval
-
-
 
         final_passages = [ doc for score, doc in hybrid_results]
         return final_passages
