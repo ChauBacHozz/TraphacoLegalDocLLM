@@ -17,7 +17,10 @@ def save_type1_origin_pre_appendix_to_db(extracted_text, heading, doc_number, dr
         vào cơ sở dữ liệu.
 
         Args:
-            extracted_text: Đoạn văn bản thô đã được xử lý ở đoạn 
+            extracted_text  : Đoạn văn bản thô đã được trích xuất từ doc gốc
+            heading         : Tiêu đề của văn bản pháp luật
+            doc_number      : Mã văn bản pháp luật
+            driver          : Giao diện kết nối code python với cơ sở dữ liệu neo4j 
     """
     
     heading_idx = None
