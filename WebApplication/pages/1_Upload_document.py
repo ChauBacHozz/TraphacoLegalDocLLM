@@ -11,6 +11,7 @@ from neo4j import GraphDatabase
 from backend.document_upload_to_db import (
                                             save_type1_origin_appendix_to_db,
                                             save_type1_origin_pre_appendix_to_db,
+                                            save_type1_modified_appendix_to_db,
                                             save_modified_doc_appendix_type1_to_db,
                                             save_modified_doc_pre_appendix_type1_to_db,
                                             save_origin_doc_pre_appendix_type1_to_db,
@@ -82,7 +83,6 @@ if st.button("Upload to database"):
         if appendix_index != None:
             # Chia văn bản đầu thành văn bản tiền phụ lục và văn bản phụ lục
             pre_appendix_text = extracted_text[:appendix_index - 1]
-            appendix_text = extracted_text[appendix_index - 1:]
         else:
             # Trường hợp còn lại toàn bộ văn bản được coi là văn bản tiền phụ lục
             pre_appendix_text = extracted_text
@@ -96,12 +96,12 @@ if st.button("Upload to database"):
             if "sửa đổi" not in heading.lower() and "bổ sung" not in heading.lower() and "bãi bỏ" not in heading.lower():
                 # Văn bản gốc
                 if appendix_index:
-                    save_type1_origin_appendix_to_db(appendix_index, heading, doc_number, driver)
+                    save_type1_origin_appendix_to_db(doc_file, heading, doc_number, driver)
                 save_type1_origin_pre_appendix_to_db(pre_appendix_text, heading, doc_number, driver)
             else:
                 # Văn bản sửa đổi
                 if appendix_index:
-                    save_type1_modified_appendix_to_db(appendix_index, heading, doc_number, driver)
+                    save_type1_modified_appendix_to_db(doc_file, heading, doc_number, driver)
                 save_type1_modified_pre_appendix_to_db(pre_appendix_text, heading, doc_number, driver)
 
         # Kiểm tra nếu văn bản có là luật hay không (loại 2)
@@ -109,12 +109,12 @@ if st.button("Upload to database"):
             if "sửa đổi" not in heading.lower() and "bổ sung" not in heading.lower() and "bãi bỏ" not in heading.lower():
                 # Văn bản gốc
                 if appendix_index:
-                    save_type2_origin_appendix_to_db(appendix_index, heading, doc_number, driver)
+                    save_type2_origin_appendix_to_db(doc_file, heading, doc_number, driver)
                 save_type2_origin_pre_appendix_to_db(pre_appendix_text, heading, doc_number, driver)
             else:
                 # Văn bản sửa đổi
                 if appendix_index:
-                    save_type2_modified_appendix_to_db(appendix_index, heading, doc_number, driver)
+                    save_type2_modified_appendix_to_db(doc_file, heading, doc_number, driver)
                 save_type2_modified_pre_appendix_to_db(pre_appendix_text, heading, doc_number, driver)
             st.toast(f"Saved {upload_file.name} database✅")
         # Nếu không phải thông tư nghị định và cũng không phải luật, in ra lỗi

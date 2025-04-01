@@ -34,9 +34,9 @@ def save_type1_origin_pre_appendix_to_db(extracted_text, heading, doc_number, dr
     if heading_idx:
         extracted_text = extracted_text[heading_idx:]
     else:
-        print("ERROR")
-        return
+        raise ValueError("Lỗi: Không tồn tại đề mục trong văn bản")
 
+    # Tiền xử lý văn bản
     full_text = normalize_bullets(extracted_text)
     # Convert text list to tree base to manage content 
     tree = convert_text_list_to_tree(full_text)
@@ -51,11 +51,61 @@ def save_type1_origin_pre_appendix_to_db(extracted_text, heading, doc_number, dr
     texts = [chunk['content'] for chunk in preprocessed_chunks]
     metadata_lst = []
     for chunk in preprocessed_chunks:
-        # chunk.pop("content")
         metadata_lst.append(chunk)
+    # Lưu dữ liệu vào neo4j sử dụng các batch để giảm gánh nặng bộ nhớ
     batch_size = 10    
     for i in stqdm(range(0, len(metadata_lst), batch_size)):
         save_origin_doc_to_db(texts[i:i+batch_size],metadata_lst[i:i+batch_size], driver)
+
+def save_type1_modified_appendix_to_db(document, heading, doc_number, driver):
+    """
+        Hàm thực hiện tiền xử lý và sau đó lưu nội dung tiền mục lục của văn bản thông tư nghị định 
+        sửa đổi vào cơ sở dữ liệu.
+
+        Args:
+            extracted_text  : Đoạn văn bản thô đã được trích xuất từ doc gốc
+            heading         : Tiêu đề của văn bản pháp luật
+            doc_number      : Mã văn bản pháp luật
+            driver          : Giao diện kết nối code python với cơ sở dữ liệu neo4j 
+    """
+    extracted_text = []
+    appendix_ids = []
+    temp_idx = 0
+    remove_idx = None
+    for para in document.paragraphs:
+        if para.text != "\xa0":
+            extracted_text.append(para.text)
+            temp_idx += 1
+        if para.alignment == WD_PARAGRAPH_ALIGNMENT.CENTER and "phụ lục" in para.text.lower():
+            appendix_ids.append(temp_idx)
+        if para.alignment == WD_PARAGRAPH_ALIGNMENT.CENTER and "biểu mẫu" in para.text.lower():
+            remove_idx = temp_idx - 1
+    if remove_idx:
+        full_text = extracted_text[appendix_ids[0] - 1:remove_idx]
+    else:
+        full_text = extracted_text[appendix_ids[0] - 1:]
+    normalized_appendix_ids = [ids - appendix_ids[0] for ids in appendix_ids]
+    chunks = normalize_appendix_text_bullets(full_text, normalized_appendix_ids)
+    # # Convert text list to tree base to manage content 
+    # tree = convert_text_list_to_tree(full_text)
+    
+    # # Flatten tree into list of strings
+    # flattened_tree = flatten_tree(tree)
+    # # Preprocess chunks
+    preprocessed_chunks = preprocess_chunks(chunks, heading, doc_number)
+    # ic(preprocessed_chunks)
+
+    # # Extract 'text' atribute from preprocessed_chunks
+    texts = [chunk['content'] for chunk in preprocessed_chunks]
+    metadata_lst = []
+    for chunk in preprocessed_chunks:
+        # chunk.pop("content")
+        metadata_lst.append(chunk)
+
+    batch_size = 10    
+    print("☑️ saving appendix data")
+    for i in stqdm(range(0, len(metadata_lst), batch_size)):
+        save_modified_doc_to_db(texts[i:i+batch_size],metadata_lst[i:i+batch_size], driver)
 
 
 def save_modified_doc_pre_appendix_type1_to_db(extracted_text, heading, doc_number, driver):
