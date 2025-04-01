@@ -14,7 +14,7 @@ from backend.graph_database.preprocessing.preprocess_docx import (normalize_bull
                              flatten_tree,
                              preprocess_chunks)
 
-def save_origin_doc_to_db(new_texts, new_metadata, driver):
+def save_origin_doc_to_db(new_metadata, driver):
     # # Add id to current new_metadata
     def count_nodes(tx):
         query = "MATCH (n) RETURN count(n) AS node_count"
@@ -174,7 +174,7 @@ def save_origin_doc_to_db(new_texts, new_metadata, driver):
         with driver.session() as session:
             session.execute_write(create_graph, mtdata)
 
-def save_modified_doc_to_db(new_texts, new_metadata, driver, doc_type = 1):
+def save_modified_doc_to_db(new_metadata, driver, doc_type = 1):
     # # Add id to current new_metadata
     def count_nodes(tx):
         query = "MATCH (n) RETURN count(n) AS node_count"
