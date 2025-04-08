@@ -456,6 +456,12 @@ def save_modified_doc_to_db(new_metadata, driver, doc_type = 1):
 
 
     def create_graph(tx, metadata):
+        def create_modified_sub_nodes(tx, modified_content, d_id, c_node_id):
+            tx.run("MERGE (p:Doc_Node:Sub_Modified_Node:Modified_Node {modified_content: $modified_content, d_id: $d_id})", modified_content = modified_content, d_id = d_id)
+            tx.run("""
+                    MATCH (p:Doc_Node:Sub_Modified_Node:Modified_Node {modified_content: $modified_content, d_id: $d_id}), (q:Doc_Node:C_Node:Modified_Node {id: $id})
+                    MERGE (q)-[:SUB_MODIFIED]->(p)
+                   """, modified_content = modified_content, d_id = d_id, id = c_node_id)
         root_node_content = metadata["heading"]
         root_id = metadata["doc_id"]
         content = metadata["content"]
@@ -483,7 +489,9 @@ def save_modified_doc_to_db(new_metadata, driver, doc_type = 1):
 
         if modified_doc_id:
             create_virtual_origin_nodes(tx, c_node_id=id, modified_paths=modified_paths, modified_doc_id=modified_doc_id)
-
+        if modified_content:
+            print(modified_content[0]["content"])
+            create_modified_sub_nodes(tx, modified_content[0]["content"], root_id, id)
         # Create middle nodes
         middle_node_names = metadata["middle_path"].split(" > ")
         for middle_node in middle_node_names:

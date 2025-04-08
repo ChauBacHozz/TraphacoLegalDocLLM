@@ -23,6 +23,26 @@ def extract_text(doc):
             temp_idx += 1
         if para.alignment == WD_PARAGRAPH_ALIGNMENT.CENTER and "phụ lục" in para.text.lower() and appendix_index == None:
             appendix_index = temp_idx
+    # Kiểm tra có bị sai chính tả không, ví dụ mở ngoặc kép nhưng không đóng ngoặc kép
+    open_index = None
+    close_index = None
+    open = False
+    for i, line in enumerate(extracted_text):
+        # Tìm ra index của dấu mở ngoặc và đóng ngoặc trong dòng đó
+        if '“' in line:
+            open_index = line.index('“')
+            if open:
+                # Xảy ra lỗi chính tả, mở ngoặc nhưng chưa đóng ngoặc đã mở ngoặc tiếp
+                # Thực hiện đóng ngoặc tại dòng trên:
+                extracted_text[i-1] += '”'
+            else:
+                open = True
+        if '”' in line:
+            close_index = line.index('”')
+            if open:
+                open = False
+
+        
     return extracted_text, appendix_index
 
 
@@ -194,7 +214,6 @@ def normalize_appendix_text_bullets(extract_text, appendix_heading_ids):
     for i in range(apd_size):
         if i < apd_size - 1:
             chunks.append(extract_text[appendix_heading_ids[i]:appendix_heading_ids[i+1]])
-
         else:
             chunks.append(extract_text[appendix_heading_ids[i]:])
     
