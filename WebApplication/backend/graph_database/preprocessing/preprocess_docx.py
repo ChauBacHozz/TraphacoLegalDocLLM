@@ -35,14 +35,17 @@ def extract_text(doc):
                 # Xảy ra lỗi chính tả, mở ngoặc nhưng chưa đóng ngoặc đã mở ngoặc tiếp
                 # Thực hiện đóng ngoặc tại dòng trên:
                 extracted_text[i-1] += '”'
+                open = False
             else:
                 open = True
         if '”' in line:
             close_index = line.index('”')
             if open:
                 open = False
+            else:
+                open = True
 
-        
+    
     return extracted_text, appendix_index
 
 
