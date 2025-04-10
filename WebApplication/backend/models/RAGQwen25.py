@@ -122,7 +122,7 @@ class RAGQwen25():
     #     tokens = word_tokenize(text, format="text").split()
     #     return len(tokens)
 
-    def search_query_from_path(self, query: str, k = 3):
+    def search_query_from_path(self, query: str, k = 6):
         """
         Perform a similarity search on the vector database.
         
@@ -235,12 +235,12 @@ class RAGQwen25():
             path = [record["node"] for record in result]
             return path
         # Hồ sơ đề nghị điều chỉnh nội dung Chứng chỉ hành nghề dược gồm những gì?
-        def get_modified_sub_nodes(tx, doc_id, content, bullet_type, bullet_id):
+        def get_modified_sub_nodes(tx, doc_id, content, bullet_type, bullet):
             query = """
             MATCH (b:Doc_Node:Modified_Node {d_id: $d_id, content: $content, bullet_type: $bullet_type, bullet: $bullet})-[:CONTAIN*1..]->(subnodes)
             RETURN subnodes
             """
-            result = tx.run(query, d_id = doc_id, content = content, bullet_type = bullet_type, bullet_id = bullet_id)
+            result = tx.run(query, d_id = doc_id, content = content, bullet_type = bullet_type, bullet = bullet)
             subnodes = [record["subnodes"] for record in result]
             return subnodes
         
@@ -257,7 +257,7 @@ class RAGQwen25():
                 modified_nodes = session.read_transaction(get_modified_nodes, doc_id, val)
                 for modified_node in modified_nodes:
                     modified_results.add(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"] + " nội dung thuộc văn bản " + doc_id + " như sau " + modified_node["content"])
-                    modified_sub_nodes = session.read_transaction(get_modified_sub_nodes, modified_node["d_id"], modified_node["content"], modified_node["bullet_type"], modified_node["bullet_id"])
+                    modified_sub_nodes = session.read_transaction(get_modified_sub_nodes, modified_node["d_id"], modified_node["content"], modified_node["bullet_type"], modified_node["bullet"])
                     for modified_sub_node in modified_sub_nodes:
                         modified_results.add(modified_sub_node["content"])
                     m_paths = session.read_transaction(get_modified_path, modified_node["d_id"], modified_node["id"])
@@ -278,7 +278,7 @@ class RAGQwen25():
                         modified_nodes = session.read_transaction(get_modified_nodes, node.metadata["d_id"], node.page_content)
                         for modified_node in modified_nodes:
                             modified_results.add(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"] + " nội dung thuộc văn bản " + doc_id + " như sau " + modified_node["content"])
-                            modified_sub_nodes = session.read_transaction(get_modified_sub_nodes, modified_node["d_id"], modified_node["content"], modified_node["bullet_type"], modified_node["bullet_id"])
+                            modified_sub_nodes = session.read_transaction(get_modified_sub_nodes, modified_node["d_id"], modified_node["content"], modified_node["bullet_type"], modified_node["bullet"])
                             for modified_sub_node in modified_sub_nodes:
                                 modified_results.add(modified_sub_node["content"])
                             m_paths = session.read_transaction(get_modified_path, modified_node["d_id"], modified_node["id"])
