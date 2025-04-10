@@ -282,7 +282,6 @@ def save_modified_doc_to_db(new_metadata, driver, doc_type = 1):
             modified_content.replace("“","")
             modified_content.replace("”","")
             modified_content = modified_content.strip()
-            metadata["content"] = re.sub(r'\[\[.*?\]\]', '', metadata["content"])
         full_path = metadata["middle_path"] + metadata["content"]
 
         # Extract modified purpose
@@ -464,10 +463,19 @@ def save_modified_doc_to_db(new_metadata, driver, doc_type = 1):
             for modified_metadata in modified_metadata_lst:
                 middle_path = modified_metadata["middle_path"]
                 modified_content = modified_metadata["content"]
-                tx.run("MERGE (p:Doc_Node:Sub_Modified_Node:Modified_Node {content: $modified_content, d_id: $d_id})", modified_content = modified_content, d_id = d_id)
+                c_bullet = modified_content.split(" ")[0].rstrip(".,:)")
+                if len(c_bullet.split(".")) > 1:
+                    c_bullet_type = "khoản"
+                    c_bullet = c_bullet.split(".")[-1]
+                else:
+                    if c_bullet.isalpha():
+                        c_bullet_type = "điểm"
+                    else:
+                        c_bullet_type = "khoản"
+                tx.run("MERGE (p:Doc_Node:Sub_Modified_Node:Modified_Node {content: $modified_content, d_id: $d_id, bullet: $bullet, bullet_type: $bullet_type})", modified_content = modified_content, d_id = d_id, bullet = c_bullet, bullet_type = c_bullet_type)
                 if len(middle_path.strip()) > 0:
                     # Tạo node cho middle path
-                    tx.run("MERGE (p:Doc_Node:Sub_Modified_Node:Modified_Node {content: $modified_content, d_id: $d_id})", modified_content = middle_path, d_id = d_id)
+                    tx.run("MERGE (p:Doc_Node:Sub_Modified_Node:Modified_Node {content: $modified_content, d_id: $d_id, bullet: $bullet, bullet_type: $bullet_type})", modified_content = middle_path, d_id = d_id, bullet = "", bullet_type = "")
                     # Kết nối sub nodes qua middle path
                     tx.run("""
                         MATCH (p:Doc_Node:Sub_Modified_Node:Modified_Node {content: $modified_content, d_id: $d_id}), (q:Doc_Node:Sub_Modified_Node:Modified_Node {content: $middle_content, d_id: $d_id})
@@ -488,6 +496,8 @@ def save_modified_doc_to_db(new_metadata, driver, doc_type = 1):
         root_node_content = metadata["heading"]
         root_id = metadata["doc_id"]
         content = metadata["content"]
+        if "[[" in content:
+            content = re.sub(r'\[\[.*?\]\]', '', content, flags=re.DOTALL)
 
         modified_purpose = metadata["modified_purpose"]
         modified_doc_id = metadata["modified_doc_id"]

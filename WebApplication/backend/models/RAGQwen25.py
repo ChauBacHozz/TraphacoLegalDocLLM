@@ -235,7 +235,15 @@ class RAGQwen25():
             path = [record["node"] for record in result]
             return path
         # Hồ sơ đề nghị điều chỉnh nội dung Chứng chỉ hành nghề dược gồm những gì?
-
+        def get_modified_sub_nodes(tx, doc_id, content, bullet_type, bullet_id):
+            query = """
+            MATCH (b:Doc_Node:Modified_Node {d_id: $d_id, content: $content, bullet_type: $bullet_type, bullet: $bullet})-[:CONTAIN*1..]->(subnodes)
+            RETURN subnodes
+            """
+            result = tx.run(query, d_id = doc_id, content = content, bullet_type = bullet_type, bullet_id = bullet_id)
+            subnodes = [record["subnodes"] for record in result]
+            return subnodes
+        
         origin_results = []
         origin_results.append("Nội dung gốc:")
         modified_results = OrderedSet()
