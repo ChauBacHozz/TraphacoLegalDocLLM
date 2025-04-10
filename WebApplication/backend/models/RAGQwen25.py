@@ -122,7 +122,7 @@ class RAGQwen25():
     #     tokens = word_tokenize(text, format="text").split()
     #     return len(tokens)
 
-    def search_query_from_path(self, query: str, k = 5):
+    def search_query_from_path(self, query: str, k = 3):
         """
         Perform a similarity search on the vector database.
         

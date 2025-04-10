@@ -282,6 +282,7 @@ def save_modified_doc_to_db(new_metadata, driver, doc_type = 1):
             modified_content.replace("“","")
             modified_content.replace("”","")
             modified_content = modified_content.strip()
+            metadata["content"] = re.sub(r'\[\[.*?\]\]', '', metadata["content"])
         full_path = metadata["middle_path"] + metadata["content"]
 
         # Extract modified purpose
