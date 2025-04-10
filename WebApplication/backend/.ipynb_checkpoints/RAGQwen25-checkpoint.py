@@ -131,7 +131,7 @@ class RAGQwen25():
 
         # BM25 Search (Full-Text Index)
         keyword_query = f"""
-            CALL db.index.fulltext.queryNodes("full_doc_index", "{query}") 
+            CALL db.index.fulltext.queryNodes("doc_index", "{query}") 
             YIELD node, score 
             RETURN node.content AS content, node.d_id AS d_id, node.path AS path
             LIMIT {k}
