@@ -257,6 +257,9 @@ class RAGQwen25():
                 modified_nodes = session.read_transaction(get_modified_nodes, doc_id, val)
                 for modified_node in modified_nodes:
                     modified_results.add(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"] + " nội dung thuộc văn bản " + doc_id + " như sau " + modified_node["content"])
+                    modified_sub_nodes = session.read_transaction(get_modified_sub_nodes, modified_node["d_id"], modified_node["content"], modified_node["bullet_type"], modified_node["bullet_id"])
+                    for modified_sub_node in modified_sub_nodes:
+                        modified_results.add(modified_sub_node["content"])
                     m_paths = session.read_transaction(get_modified_path, modified_node["d_id"], modified_node["id"])
                     m_path = OrderedSet()
                     for p in m_paths:
@@ -274,7 +277,10 @@ class RAGQwen25():
                         origin_results[-1] = origin_results[-1].rstrip(";") + ";"
                         modified_nodes = session.read_transaction(get_modified_nodes, node.metadata["d_id"], node.page_content)
                         for modified_node in modified_nodes:
-                            modified_results.add(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"]  + " nội dung thuộc văn bản " + doc_id  +  " như sau " + modified_node["content"])
+                            modified_results.add(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"] + " nội dung thuộc văn bản " + doc_id + " như sau " + modified_node["content"])
+                            modified_sub_nodes = session.read_transaction(get_modified_sub_nodes, modified_node["d_id"], modified_node["content"], modified_node["bullet_type"], modified_node["bullet_id"])
+                            for modified_sub_node in modified_sub_nodes:
+                                modified_results.add(modified_sub_node["content"])
                             m_paths = session.read_transaction(get_modified_path, modified_node["d_id"], modified_node["id"])
                             m_path = OrderedSet()
                             for p in m_paths:
@@ -288,9 +294,6 @@ class RAGQwen25():
         modified_results = list(modified_results)
         return origin_results, modified_results
                         
-
-        final_passages = [ doc for score, doc in hybrid_results]
-        return final_passages
     
     def get_retrieval_data(self, query: str):
         # CHECK IF QUERY IS A HEADER OR NOT
