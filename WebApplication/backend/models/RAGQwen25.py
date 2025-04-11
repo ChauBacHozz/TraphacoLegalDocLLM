@@ -165,6 +165,7 @@ class RAGQwen25():
         hybrid_results = [vector_documents[i] for i in hybrid_indices]
         final_passages = hybrid_results + keyword_documents
 
+        ic(final_passages)
         # Thu gọn các passage bị trùng
         final_dict = {}
         for doc in final_passages:
