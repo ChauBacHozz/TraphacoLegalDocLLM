@@ -458,7 +458,7 @@ def save_modified_doc_to_db(new_metadata, driver, doc_type = 1):
 
 
     def create_graph(tx, metadata):
-        def create_modified_sub_nodes(tx, modified_metadata_lst, d_id, c_node_id):
+        def create_modified_sub_nodes(tx, modified_metadata_lst, d_id, c_node_id, full_path):
             
             for modified_metadata in modified_metadata_lst:
                 middle_path = modified_metadata["middle_path"]
@@ -472,10 +472,11 @@ def save_modified_doc_to_db(new_metadata, driver, doc_type = 1):
                         c_bullet_type = "điểm"
                     else:
                         c_bullet_type = "khoản"
-                tx.run("MERGE (p:Doc_Node:Sub_Modified_Node:Modified_Node {content: $modified_content, d_id: $d_id, bullet: $bullet, bullet_type: $bullet_type})", modified_content = modified_content, d_id = d_id, bullet = c_bullet, bullet_type = c_bullet_type)
+                path = full_path + str(" > " + middle_path + " > " + c_bullet_type + " " + c_bullet + "_(modified_sub_nodes)")
+                tx.run("MERGE (p:Doc_Node:Sub_Modified_Node:Modified_Node {content: $modified_content, d_id: $d_id, bullet: $bullet, bullet_type: $bullet_type, path: $path})", modified_content = modified_content, d_id = d_id, bullet = c_bullet, bullet_type = c_bullet_type, path = path)
                 if len(middle_path.strip()) > 0:
                     # Tạo node cho middle path
-                    tx.run("MERGE (p:Doc_Node:Sub_Modified_Node:Modified_Node {content: $modified_content, d_id: $d_id, bullet: $bullet, bullet_type: $bullet_type})", modified_content = middle_path, d_id = d_id, bullet = "", bullet_type = "")
+                    tx.run("MERGE (p:Doc_Node:Sub_Modified_Node:Modified_Node {content: $modified_content, d_id: $d_id, bullet: $bullet, bullet_type: $bullet_type, path: $path})", modified_content = middle_path, d_id = d_id, bullet = "", bullet_type = "", path = full_path + str(" > " + middle_path))
                     # Kết nối sub nodes qua middle path
                     tx.run("""
                         MATCH (p:Doc_Node:Sub_Modified_Node:Modified_Node {content: $modified_content, d_id: $d_id}), (q:Doc_Node:Sub_Modified_Node:Modified_Node {content: $middle_content, d_id: $d_id})
@@ -498,7 +499,7 @@ def save_modified_doc_to_db(new_metadata, driver, doc_type = 1):
         content = metadata["content"]
         if "[[" in content:
             content = re.sub(r'\[\[.*?\]\]', '', content, flags=re.DOTALL)
-
+        full_path = ""
         modified_purpose = metadata["modified_purpose"]
         modified_doc_id = metadata["modified_doc_id"]
         modified_paths = metadata["modified_paths"]
@@ -508,22 +509,6 @@ def save_modified_doc_to_db(new_metadata, driver, doc_type = 1):
         # Create root node
         tx.run("MERGE (p:Doc_Node:R_Node:Modified_Node {content: $content, d_id: $id})", content = root_node_content,  id = root_id)
 
-        # Create content node, content_bullet = bullet from c_node's content            
-        c_bullet = content.split(" ")[0].rstrip(".,:)")
-        if len(c_bullet.split(".")) > 1:
-            c_bullet_type = "khoản"
-            c_bullet = c_bullet.split(".")[-1]
-        else:
-            if c_bullet.isalpha():
-                c_bullet_type = "điểm"
-            else:
-                c_bullet_type = "khoản"
-        tx.run("MERGE (p:Doc_Node:C_Node:Modified_Node {bullet: $bullet, bullet_type: $bullet_type, content: $content, d_id: $d_id, id: $id, modified_purpose: $modified_purpose})", bullet = c_bullet, bullet_type = c_bullet_type, content = content, id = id, d_id = root_id, modified_purpose = modified_purpose)
-
-        if modified_doc_id:
-            create_virtual_origin_nodes(tx, c_node_id=id, modified_paths=modified_paths, modified_doc_id=modified_doc_id)
-        if modified_content:
-            create_modified_sub_nodes(tx, modified_content, root_id, id)
         # Create middle nodes
         middle_node_names = metadata["middle_path"].split(" > ")
         for middle_node in middle_node_names:
@@ -543,7 +528,28 @@ def save_modified_doc_to_db(new_metadata, driver, doc_type = 1):
                         m_bullet_type = "điểm"
                     else:
                         m_bullet_type = "khoản"
-            tx.run("MERGE (p:Doc_Node:M_Node:Modified_Node {bullet: $bullet, bullet_type: $bullet_type, content: $content, d_id: $d_id})", bullet = m_bullet, bullet_type = m_bullet_type, content = middle_node, d_id = root_id)
+            full_path = full_path + str(m_bullet_type + " " + m_bullet)
+            tx.run("MERGE (p:Doc_Node:M_Node:Modified_Node {path: $path, bullet: $bullet, bullet_type: $bullet_type, content: $content, d_id: $d_id})", bullet = m_bullet, bullet_type = m_bullet_type, content = middle_node, d_id = root_id, path = full_path)
+            full_path += " > "
+
+        # Create content node, content_bullet = bullet from c_node's content            
+        c_bullet = content.split(" ")[0].rstrip(".,:)")
+        if len(c_bullet.split(".")) > 1:
+            c_bullet_type = "khoản"
+            c_bullet = c_bullet.split(".")[-1]
+        else:
+            if c_bullet.isalpha():
+                c_bullet_type = "điểm"
+            else:
+                c_bullet_type = "khoản"
+        full_path = full_path + str(c_bullet_type + " " + c_bullet)
+        tx.run("MERGE (p:Doc_Node:C_Node:Modified_Node {path: $path, bullet: $bullet, bullet_type: $bullet_type, content: $content, d_id: $d_id, id: $id, modified_purpose: $modified_purpose})", bullet = c_bullet, bullet_type = c_bullet_type, content = content, id = id, d_id = root_id, modified_purpose = modified_purpose, path = full_path)
+
+        if modified_doc_id:
+            create_virtual_origin_nodes(tx, c_node_id=id, modified_paths=modified_paths, modified_doc_id=modified_doc_id)
+        if modified_content:
+            create_modified_sub_nodes(tx, modified_content, root_id, id, full_path)
+
         # Connect root node to first middle node
         tx.run("""
             MATCH (a:Doc_Node:R_Node:Modified_Node {content: $p_content, d_id: $root_id}), (b:Doc_Node:M_Node:Modified_Node {content: $m_content, d_id: $id})

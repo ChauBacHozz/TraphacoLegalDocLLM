@@ -165,12 +165,12 @@ class RAGQwen25():
         hybrid_results = [vector_documents[i] for i in hybrid_indices]
         final_passages = hybrid_results + keyword_documents
 
-        ic(final_passages)
         # Thu gọn các passage bị trùng
         final_dict = {}
         for doc in final_passages:
             key = doc.metadata["d_id"] + " | " + (doc.metadata["path"] or "")
             final_dict[key] = doc.page_content
+        ic(final_dict)
         # Sắp xếp theo key thứ tự alphabet
         final_dict = {k: final_dict[k] for k in sorted(final_dict)}
         # ic(final_dict)
