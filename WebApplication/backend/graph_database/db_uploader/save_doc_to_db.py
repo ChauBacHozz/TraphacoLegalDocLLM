@@ -482,26 +482,25 @@ def save_modified_doc_to_db(new_metadata, driver, doc_type = 1):
                     for i, m_path in enumerate(middle_paths_lst):
                         path = path + m_path
                         paths.append(path)
-                        tx.run("MERGE (p:Doc_Node:Sub_Modified_Node:Modified_Node {content: $content, d_id: $d_id, bullet: $bullet, bullet_type: $bullet_type, path: $path})", content = m_path, d_id = d_id, bullet = "", bullet_type = "", path = full_path + str(" > " + path))
+                        tx.run("MERGE (p:Doc_Node:Sub_Modified_Node:Modified_Node {content: $content, d_id: $d_id, bullet: $bullet, bullet_type: $bullet_type, path: $path})", content = m_path.strip(), d_id = d_id, bullet = "", bullet_type = "", path = (full_path + str(" > " + path)).strip())
                         path += " > "
-                    print(paths)
                     
                     for i in range(len(middle_paths_lst) - 1):
                         # Kết nối middle path với nhau
                         tx.run("""
                             MATCH (p:Doc_Node:Sub_Modified_Node:Modified_Node {path: $path1, d_id: $d_id}), (q:Doc_Node:Sub_Modified_Node:Modified_Node {path: $path2, d_id: $d_id})
                             MERGE (p)-[:CONTAIN]->(q)
-                            """, path1 = full_path + (" > " + paths[i]), path2 = full_path + (" > " + paths[i+1]), d_id = d_id)
+                            """, path1 = (full_path + (" > " + paths[i])).strip(), path2 = (full_path + (" > " + paths[i+1])).strip(), d_id = d_id)
                     # Kết nối middle path với node ngoài
                     tx.run("""
                         MATCH (q:Doc_Node:C_Node:Modified_Node {id: $id}), (p:Doc_Node:Sub_Modified_Node:Modified_Node {path: $path, d_id: $d_id})
                         MERGE (q)-[:CONTAIN]->(p)
-                        """, path = full_path + (" > " + paths[0]), d_id = d_id, id = c_node_id)
+                        """, path = (full_path + (" > " + paths[0])).strip(), d_id = d_id, id = c_node_id)
                     # Kết nối middle path cuối với sub modified node
                     tx.run("""
                         MATCH (p:Doc_Node:Sub_Modified_Node:Modified_Node {path: $path, d_id: $d_id}), (q:Doc_Node:Sub_Modified_Node:Modified_Node {content: $modified_content, d_id: $d_id}) 
                         MERGE (p)-[:CONTAIN]->(q)
-                        """, modified_content = modified_content, path = full_path + (" > " + paths[-1]), d_id = d_id)
+                        """, modified_content = modified_content, path = (full_path + (" > " + paths[-1])).strip(), d_id = d_id)
                 else:
                     # Kết nối sub nodes với node ngoài
                     tx.run("""
