@@ -75,7 +75,7 @@ class RAGQwen25():
 
         # Khởi tạo các tham số điều khiển đầu ra của mô hình
         self.max_new_tokens=5000    
-        self.temperature = 0
+        self.temperature = 0.1
         self.top_p=0.45
         self.top_k=30
 
@@ -206,7 +206,7 @@ class RAGQwen25():
                              """
             result = tx.run(query_sub_info, d_id = doc_id, path = path)
             result = list(result)
-            return [Document(page_content=doc["n"]["content"], metadata={"d_id": doc["n"]["d_id"], "path": doc["n"]["path"]}) for doc in result if doc["n"]["path"] != path]
+            return [Document(page_content=doc["n"]["content"], metadata={"d_id": doc["n"]["d_id"], "path": doc["n"]["path"], "bullet_type": doc["n"]["bullet_type"]}) for doc in result if doc["n"]["path"] != path]
         
         def get_sub_nodes_lv1(tx, doc_id, path):
             query_sub_info = """ MATCH (n:Doc_Node:Origin_Node {d_id: $d_id, path: $path})-[:CONTAIN]->(m:Doc_Node:Origin_Node {d_id: $d_id})
@@ -275,7 +275,11 @@ class RAGQwen25():
                 with self.driver.session() as session:
                     nodes_list = session.read_transaction(get_sub_nodes, doc_id, path)
                     for node in nodes_list:
-                        origin_results[-1] = origin_results[-1] + "\n" + node.metadata["path"].split(" > ")[-1].split(" ")[0] + " " + node.page_content.strip()
+                        if node.metadata["bullet_type"] in node.metadata["path"].split(" > ")[-1].split(" ")[0]:
+                            origin_results[-1] = origin_results[-1] + "\n" + node.metadata["path"].split(" > ")[-1].split(" ")[0] + " " + node.page_content.strip()
+                        else:
+                            origin_results[-1] = origin_results[-1] + "\n" + node.metadata["bullet_type"] + " " + node.page_content.strip()
+
                         origin_results[-1] = origin_results[-1].rstrip(";") + ";"
                         modified_nodes = session.read_transaction(get_modified_nodes, node.metadata["d_id"], node.page_content)
                         for modified_node in modified_nodes:

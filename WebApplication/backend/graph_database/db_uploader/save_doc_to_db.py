@@ -472,7 +472,7 @@ def save_modified_doc_to_db(new_metadata, driver, doc_type = 1):
                         c_bullet_type = "điểm"
                     else:
                         c_bullet_type = "khoản"
-                path = full_path + str(" > " + middle_path + " > " + modified_content + "_(modified_sub_nodes)")
+                path = full_path + str(" > " + middle_path.strip() + " > " + modified_content.strip() + "_(modified_sub_nodes)")
                 tx.run("MERGE (p:Doc_Node:Sub_Modified_Node:Modified_Node {content: $modified_content, d_id: $d_id, bullet: $bullet, bullet_type: $bullet_type, path: $path})", modified_content = modified_content, d_id = d_id, bullet = c_bullet, bullet_type = c_bullet_type, path = path)
                 if len(middle_path.strip()) > 0:
                     path = ""
@@ -480,7 +480,7 @@ def save_modified_doc_to_db(new_metadata, driver, doc_type = 1):
                     middle_paths_lst = middle_path.split(" > ")
                     # Tạo node cho middle path
                     for i, m_path in enumerate(middle_paths_lst):
-                        path = path + m_path
+                        path = path + m_path.strip()
                         paths.append(path)
                         if "chương" in m_path.lower():
                             m_bullet = m_path.split(" ")[1]
