@@ -75,8 +75,8 @@ class RAGQwen25():
 
         # Khởi tạo các tham số điều khiển đầu ra của mô hình
         self.max_new_tokens=5000    
-        self.temperature = 0.2
-        self.top_p=0.95
+        self.temperature = 0
+        self.top_p=0.45
         self.top_k=30
 
         self.model, self.tokenizer, self.rerank_model = self.load_huggingface_model(self.model_file)
@@ -202,7 +202,7 @@ class RAGQwen25():
         def get_sub_nodes(tx, doc_id, path):
             query_sub_info = """ MATCH (n:Doc_Node {d_id: $d_id})
                                 WHERE n.path STARTS WITH $path 
-                                RETURN n ORDER BY elementId(n)
+                                RETURN n ORDER BY n.path ASC
                              """
             result = tx.run(query_sub_info, d_id = doc_id, path = path)
             result = list(result)

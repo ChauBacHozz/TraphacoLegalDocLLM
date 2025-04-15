@@ -472,7 +472,7 @@ def save_modified_doc_to_db(new_metadata, driver, doc_type = 1):
                         c_bullet_type = "điểm"
                     else:
                         c_bullet_type = "khoản"
-                path = full_path + str(" > " + middle_path + " > " + c_bullet_type + " " + c_bullet + "_(modified_sub_nodes)")
+                path = full_path + str(" > " + middle_path + " > " + modified_content + "_(modified_sub_nodes)")
                 tx.run("MERGE (p:Doc_Node:Sub_Modified_Node:Modified_Node {content: $modified_content, d_id: $d_id, bullet: $bullet, bullet_type: $bullet_type, path: $path})", modified_content = modified_content, d_id = d_id, bullet = c_bullet, bullet_type = c_bullet_type, path = path)
                 if len(middle_path.strip()) > 0:
                     path = ""
@@ -482,7 +482,23 @@ def save_modified_doc_to_db(new_metadata, driver, doc_type = 1):
                     for i, m_path in enumerate(middle_paths_lst):
                         path = path + m_path
                         paths.append(path)
-                        tx.run("MERGE (p:Doc_Node:Sub_Modified_Node:Modified_Node {content: $content, d_id: $d_id, bullet: $bullet, bullet_type: $bullet_type, path: $path})", content = m_path.strip(), d_id = d_id, bullet = "", bullet_type = "", path = (full_path + str(" > " + path)).strip())
+                        if "chương" in m_path.lower():
+                            m_bullet = m_path.split(" ")[1]
+                            m_bullet_type = "chương"
+                        elif "phụ lục" in m_path.lower():
+                            m_bullet = m_path.split(" ")[2].rstrip(",.:)")
+                            m_bullet_type = "phụ lục"
+                        else:
+                            m_bullet = re.split(r"[.,;)]", m_path)[0]
+                            if len(m_bullet.split(" ")) > 1:
+                                m_bullet_type = m_bullet.split(" ")[0].lower()
+                                m_bullet = m_bullet.split(" ")[-1]
+                            else:
+                                if m_bullet.isalpha():
+                                    m_bullet_type = "điểm"
+                                else:
+                                    m_bullet_type = "khoản"
+                        tx.run("MERGE (p:Doc_Node:Sub_Modified_Node:Modified_Node {content: $content, d_id: $d_id, bullet: $bullet, bullet_type: $bullet_type, path: $path})", content = m_path.strip(), d_id = d_id, bullet = m_bullet, bullet_type = m_bullet_type, path = (full_path + str(" > " + path)).strip())
                         path += " > "
                     
                     for i in range(len(middle_paths_lst) - 1):
