@@ -482,7 +482,7 @@ def save_modified_doc_to_db(new_metadata, driver, doc_type = 1):
                     for i, m_path in enumerate(middle_paths_lst):
                         path = path + m_path
                         paths.append(path)
-                        tx.run("MERGE (p:Doc_Node:Sub_Modified_Node:Modified_Node {content: $content, d_id: $d_id, bullet: $bullet, bullet_type: $bullet_type, path: $path})", content = middle_path, d_id = d_id, bullet = "", bullet_type = "", path = full_path + str(" > " + path))
+                        tx.run("MERGE (p:Doc_Node:Sub_Modified_Node:Modified_Node {content: $content, d_id: $d_id, bullet: $bullet, bullet_type: $bullet_type, path: $path})", content = m_path, d_id = d_id, bullet = "", bullet_type = "", path = full_path + str(" > " + path))
                         path += " > "
                     print(paths)
                     

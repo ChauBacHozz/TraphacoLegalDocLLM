@@ -176,13 +176,13 @@ class RAGQwen25():
         shorten_final_dict = {}
         # Kiểm tra các key trong final dict, nếu có key nào mà key trước đó thuộc key đó thì sẽ lấy key trước đó (cha)
         final_dict_keys_lst = list(final_dict.keys())
-        ic(final_dict_keys_lst)
         shorten_final_dict[final_dict_keys_lst[0]] = final_dict[final_dict_keys_lst[0]]
+        iter = 0
         for i in range(1, len(final_dict_keys_lst)):
-            if final_dict_keys_lst[i-1].strip() in final_dict_keys_lst[i]:
-                print("Check")
+            if final_dict_keys_lst[iter].strip() in final_dict_keys_lst[i]:
                 continue
             shorten_final_dict[final_dict_keys_lst[i]] = final_dict[final_dict_keys_lst[i]]
+            iter = i
         ic(shorten_final_dict)
 
         # Thực hiện rerank

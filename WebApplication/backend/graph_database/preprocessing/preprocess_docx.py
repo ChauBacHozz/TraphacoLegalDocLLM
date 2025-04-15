@@ -386,7 +386,7 @@ def preprocess_chunks(chunks, heading, doc_number):
                 #     doc_id = doc_id.replace("-", "")
             else:
                 doc_id = idx + 1
-            combined_text = doc_id + " > " + chunk
+            content = content.split(" > ")[-1]
             path = []
             for i in match[:-1]:
                 if len(i.strip()) > 0:
