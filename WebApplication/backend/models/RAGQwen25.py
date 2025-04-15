@@ -169,17 +169,18 @@ class RAGQwen25():
         final_dict = {}
         for doc in final_passages:
             key = doc.metadata["d_id"] + " | " + (doc.metadata["path"] or "")
-            final_dict[key] = doc.page_content
-        ic(final_dict)
+            final_dict[key.strip()] = doc.page_content
         # Sắp xếp theo key thứ tự alphabet
         final_dict = {k: final_dict[k] for k in sorted(final_dict)}
         # ic(final_dict)
         shorten_final_dict = {}
         # Kiểm tra các key trong final dict, nếu có key nào mà key trước đó thuộc key đó thì sẽ lấy key trước đó (cha)
         final_dict_keys_lst = list(final_dict.keys())
+        ic(final_dict_keys_lst)
         shorten_final_dict[final_dict_keys_lst[0]] = final_dict[final_dict_keys_lst[0]]
         for i in range(1, len(final_dict_keys_lst)):
-            if final_dict_keys_lst[i-1] in final_dict_keys_lst[i]:
+            if final_dict_keys_lst[i-1].strip() in final_dict_keys_lst[i]:
+                print("Check")
                 continue
             shorten_final_dict[final_dict_keys_lst[i]] = final_dict[final_dict_keys_lst[i]]
         ic(shorten_final_dict)
@@ -258,9 +259,9 @@ class RAGQwen25():
                 modified_nodes = session.read_transaction(get_modified_nodes, doc_id, val)
                 for modified_node in modified_nodes:
                     modified_results.add(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"] + " nội dung thuộc văn bản " + doc_id + " như sau " + modified_node["content"])
-                    modified_sub_nodes = session.read_transaction(get_modified_sub_nodes, modified_node["d_id"], modified_node["content"], modified_node["bullet_type"], modified_node["bullet"])
-                    for modified_sub_node in modified_sub_nodes:
-                        modified_results.add(modified_sub_node["content"])
+                    # modified_sub_nodes = session.read_transaction(get_modified_sub_nodes, modified_node["d_id"], modified_node["content"], modified_node["bullet_type"], modified_node["bullet"])
+                    # for modified_sub_node in modified_sub_nodes:
+                    #     modified_results.add(modified_sub_node["content"])
                     m_paths = session.read_transaction(get_modified_path, modified_node["d_id"], modified_node["id"])
                     m_path = OrderedSet()
                     for p in m_paths:
@@ -279,9 +280,9 @@ class RAGQwen25():
                         modified_nodes = session.read_transaction(get_modified_nodes, node.metadata["d_id"], node.page_content)
                         for modified_node in modified_nodes:
                             modified_results.add(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"] + " nội dung thuộc văn bản " + doc_id + " như sau " + modified_node["content"])
-                            modified_sub_nodes = session.read_transaction(get_modified_sub_nodes, modified_node["d_id"], modified_node["content"], modified_node["bullet_type"], modified_node["bullet"])
-                            for modified_sub_node in modified_sub_nodes:
-                                modified_results.add(modified_sub_node["content"])
+                            # modified_sub_nodes = session.read_transaction(get_modified_sub_nodes, modified_node["d_id"], modified_node["content"], modified_node["bullet_type"], modified_node["bullet"])
+                            # for modified_sub_node in modified_sub_nodes:
+                            #     modified_results.add(modified_sub_node["content"])
                             m_paths = session.read_transaction(get_modified_path, modified_node["d_id"], modified_node["id"])
                             m_path = OrderedSet()
                             for p in m_paths:
