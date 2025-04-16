@@ -74,10 +74,10 @@ class RAGQwen25():
         ### Trả lời:'''           # Khởi tạo mô hình LLM và tokenizer
 
         # Khởi tạo các tham số điều khiển đầu ra của mô hình
-        self.max_new_tokens=8000    
+        self.max_new_tokens=5000    
         self.temperature = 0.1
-        self.top_p=0.3
-        self.top_k=30
+        self.top_p=0.2
+        self.top_k=20
 
         self.model, self.tokenizer, self.rerank_model = self.load_huggingface_model(self.model_file)
 
@@ -198,6 +198,7 @@ class RAGQwen25():
 
         shorten_final_dict = OrderedDict(shorten_final_dict)
         shorten_final_dict = OrderedDict(sorted(shorten_final_dict.items(), reverse=True, key=lambda x: scores_dict[x[0]]))
+        shorten_final_dict.popitem()
         # Làm giàu thông tin retrieval data
         def get_sub_nodes(tx, doc_id, path):
             query_sub_info = """ MATCH (n:Doc_Node {d_id: $d_id})
@@ -324,19 +325,6 @@ class RAGQwen25():
         model = AutoModelForCausalLM.from_pretrained(model_file, device_map="auto")
         tokenizer = AutoTokenizer.from_pretrained(model_file)
         
-
-        # query = "UIT là gì?"
-        # sentences = [
-        #     "Trường Đại học Công nghệ Thông tin có tên tiếng Anh là University of Information Technology (viết tắt là UIT) là thành viên của Đại học Quốc Gia TP.HCM.",
-        #     "Trường Đại học Kinh tế – Luật (tiếng Anh: University of Economics and Law – UEL) là trường đại học đào tạo và nghiên cứu khối ngành kinh tế, kinh doanh và luật hàng đầu Việt Nam.",
-        #     "Quĩ uỷ thác đầu tư (tiếng Anh: Unit Investment Trusts; viết tắt: UIT) là một công ty đầu tư mua hoặc nắm giữ một danh mục đầu tư cố định"
-        # ]
-
-        # tokenized_query = ViTokenizer.tokenize(query)
-        # tokenized_sentences = [ViTokenizer.tokenize(sent) for sent in sentences]
-
-        # tokenized_pairs = [[tokenized_query, sent] for sent in tokenized_sentences]
-
         rerank_model_id = 'itdainb/PhoRanker'
         
         rerank_model = CrossEncoder(rerank_model_id, max_length=4000)
