@@ -37,7 +37,7 @@ os.environ["USE_TF"] = "0"
 class RAGQwen25():
     def __init__(self, vector_db_path = "vectorstores/db_faiss", 
                  embedding_model = None,
-                 model_file = "Qwen/Qwen2.5-7B-Instruct",
+                 model_file = "Qwen/Qwen2.5-14B-Instruct-AWQ",
                  ):
         
         self.vector_db_path = vector_db_path
@@ -74,9 +74,9 @@ class RAGQwen25():
         ### Trả lời:'''           # Khởi tạo mô hình LLM và tokenizer
 
         # Khởi tạo các tham số điều khiển đầu ra của mô hình
-        self.max_new_tokens=5000    
+        self.max_new_tokens=8000    
         self.temperature = 0.1
-        self.top_p=0.45
+        self.top_p=0.3
         self.top_k=30
 
         self.model, self.tokenizer, self.rerank_model = self.load_huggingface_model(self.model_file)
@@ -186,18 +186,18 @@ class RAGQwen25():
         ic(shorten_final_dict)
 
         # Thực hiện rerank
-        # tokenized_query = ViTokenizer.tokenize(query)
-        # tokenized_sentences = [ViTokenizer.tokenize(sent) for sent in shorten_final_dict.values()]
+        tokenized_query = ViTokenizer.tokenize(query)
+        tokenized_sentences = [ViTokenizer.tokenize(sent) for sent in shorten_final_dict.values()]
 
-        # tokenized_pairs = [[tokenized_query, sent] for sent in tokenized_sentences]
-        # scores = self.rerank_model.predict(tokenized_pairs)
-        # scores_dict = {}
+        tokenized_pairs = [[tokenized_query, sent] for sent in tokenized_sentences]
+        scores = self.rerank_model.predict(tokenized_pairs)
+        scores_dict = {}
 
-        # for i, key in enumerate(shorten_final_dict.keys()):
-        #     scores_dict[key] = scores[i]
+        for i, key in enumerate(shorten_final_dict.keys()):
+            scores_dict[key] = scores[i]
 
-        # shorten_final_dict = OrderedDict(shorten_final_dict)
-        # shorten_final_dict = OrderedDict(sorted(shorten_final_dict.items(), reverse=True, key=lambda x: scores_dict[x[0]]))
+        shorten_final_dict = OrderedDict(shorten_final_dict)
+        shorten_final_dict = OrderedDict(sorted(shorten_final_dict.items(), reverse=True, key=lambda x: scores_dict[x[0]]))
         # Làm giàu thông tin retrieval data
         def get_sub_nodes(tx, doc_id, path):
             query_sub_info = """ MATCH (n:Doc_Node {d_id: $d_id})
@@ -267,7 +267,7 @@ class RAGQwen25():
                     for p in m_paths:
                         m_path.add(p["bullet_type"] + " " + p["bullet"])
                     m_path = " ".join(list(m_path))
-                    origin_results[-1] = origin_results[-1]
+                    origin_results[-1] = origin_results[-1].rstrip(".;")
                     origin_results[-1] = origin_results[-1] + " (Được " + modified_node["modified_purpose"] + " ở " + m_path + " thuộc văn bản " + modified_node["d_id"] + ");"
             #     final_results.append(modified_nodes)
             if len(path) > 0:
@@ -280,19 +280,20 @@ class RAGQwen25():
                         else:
                             origin_results[-1] = origin_results[-1] + "\n" + node.metadata["bullet_type"] + " " + node.page_content.strip()
 
-                        origin_results[-1] = origin_results[-1].rstrip(";")
+                        origin_results[-1] = origin_results[-1].rstrip(".;")
                         modified_nodes = session.read_transaction(get_modified_nodes, node.metadata["d_id"], node.page_content)
                         for modified_node in modified_nodes:
                             modified_results.add(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"] + " nội dung thuộc văn bản " + doc_id + " như sau " + modified_node["content"])
                             # modified_sub_nodes = session.read_transaction(get_modified_sub_nodes, modified_node["d_id"], modified_node["content"], modified_node["bullet_type"], modified_node["bullet"])
                             # for modified_sub_node in modified_sub_nodes:
-                            #     modified_results.add(modified_sub_node["content"])
+                            #     modified_results.add(modified_sub_node[
+                            # "content"])
                             m_paths = session.read_transaction(get_modified_path, modified_node["d_id"], modified_node["id"])
                             m_path = OrderedSet()
                             for p in m_paths:
                                 m_path.add(p["bullet_type"] + " " + p["bullet"])
                             m_path = " ".join(list(m_path))
-                            origin_results[-1] = origin_results[-1]
+                            origin_results[-1] = origin_results[-1].rstrip(".;")
                             origin_results[-1] = origin_results[-1] + " (Được " + modified_node["modified_purpose"] + " ở " + m_path + " thuộc văn bản " + modified_node["d_id"] + ");"
                         # final_results.append(modified_nodes)
                     # for node in nodes_list:
@@ -307,20 +308,20 @@ class RAGQwen25():
         return origin_context, modified_context
     
     def load_huggingface_model(self,model_file):
-        # quantization_config = BitsAndBytesConfig(
-        #     load_in_4bit=True,  # Tải trọng số được lượng hóa trước theo định dạng 4 bit
-        #     bnb_4bit_quant_type="nf4",  # Sử dụng loại lượng hóa "nf4" cho trọng số 4 bit
-        #     bnb_4bit_compute_dtype=torch.bfloat16,  # Sử dụng torch.bfloat16 cho các phép tính trung gian
-        #     bnb_4bit_use_double_quant=True,  # Sử dụng độ chính xác kép để lượng hóa kích hoạt
-        # )
         quantization_config = BitsAndBytesConfig(
-            load_in_8bit=True,  # Load weights in 8-bit quantization
-            llm_int8_threshold=6.0,  # Default threshold for mixed precision
-            llm_int8_skip_modules=None,  # Skip no modules by default
-            llm_int8_enable_fp32_cpu_offload=False  # Keep computations on GPU
+            load_in_4bit=True,  # Tải trọng số được lượng hóa trước theo định dạng 4 bit
+            bnb_4bit_quant_type="nf4",  # Sử dụng loại lượng hóa "nf4" cho trọng số 4 bit
+            bnb_4bit_compute_dtype=torch.bfloat16,  # Sử dụng torch.bfloat16 cho các phép tính trung gian
+            bnb_4bit_use_double_quant=True,  # Sử dụng độ chính xác kép để lượng hóa kích hoạt
         )
+        # quantization_config = BitsAndBytesConfig(
+        #     load_in_8bit=True,  # Load weights in 8-bit quantization
+        #     llm_int8_threshold=6.0,  # Default threshold for mixed precision
+        #     llm_int8_skip_modules=None,  # Skip no modules by default
+        #     llm_int8_enable_fp32_cpu_offload=False  # Keep computations on GPU
+        # )
         # quantization_config = BitsAndBytesConfig(load_in_8bit=True, llm_int8_threshold = 6.0)
-        model = AutoModelForCausalLM.from_pretrained(model_file, device_map="auto", quantization_config=quantization_config)
+        model = AutoModelForCausalLM.from_pretrained(model_file, device_map="auto")
         tokenizer = AutoTokenizer.from_pretrained(model_file)
         
 
@@ -375,7 +376,7 @@ class RAGQwen25():
                 temperature = self.temperature,
                 top_p=self.top_p,
                 top_k=self.top_k,
-                do_sample = True
+                do_sample = False
             )
             generated_ids = [
                 output_ids[len(input_ids):] for input_ids, output_ids in zip(model_inputs.input_ids, generated_ids)

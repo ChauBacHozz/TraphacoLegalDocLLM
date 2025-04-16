@@ -5,7 +5,7 @@ from icecream import ic
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 
 seps = '[.,;-+]'
-ascii = string.ascii_lowercase
+ascii = "aăâbcdđeêghiklmnoôơpqrstuưvxy"
 lowest_level = [(i + ")") for i in ascii]
 levels = [lowest_level]
 alphabet_lst = [i for i in ascii]
