@@ -61,6 +61,7 @@ class RAGQwen25():
         - Nếu ngữ cảnh chứa câu trả lời, hãy cung cấp câu trả lời chính xác, đầy đủ, bao gồm toàn bộ nội dung liên quan từ ngữ cảnh (văn bản, đề mục, và các chi tiết cụ thể), không bỏ sót thông tin quan trọng.
         - Phải nêu rõ câu trả lời được lấy từ nội dung của văn bản nào, đề mục như thế nào.
         - Nêu rõ thông tin bãi bỏ, sửa đổi, bổ sung bên cạnh đề mục đó
+        - Nếu nhiều đề mục cùng nằm trong một đề lục lớn cha, trả lời toàn bộ đề mục thuộc đề mục cha.
         - Trích dẫn đầy đủ và chính xác các văn bản, điều, khoản, hoặc đề mục được nêu trong ngữ cảnh để tránh thiếu sót.
         - Nếu ngữ cảnh không chứa câu trả lời, chỉ từ chối trả lời bằng cách nêu rõ không có thông tin, không suy luận hay bổ sung thêm.
 
@@ -294,7 +295,6 @@ class RAGQwen25():
                             for p in m_paths:
                                 m_path.add(p["bullet_type"] + " " + p["bullet"])
                             m_path = " ".join(list(m_path))
-                            origin_results[-1] = origin_results[-1].rstrip(".;")
                             origin_results[-1] = origin_results[-1] + " (Được " + modified_node["modified_purpose"] + " ở " + m_path + " thuộc văn bản " + modified_node["d_id"] + ");"
                         # final_results.append(modified_nodes)
                     # for node in nodes_list:
