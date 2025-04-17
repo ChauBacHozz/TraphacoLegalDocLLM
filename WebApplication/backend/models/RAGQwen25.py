@@ -203,7 +203,7 @@ class RAGQwen25():
         def get_sub_nodes(tx, doc_id, path):
             query_sub_info = """ MATCH (n:Doc_Node {d_id: $d_id})
                                 WHERE n.path STARTS WITH $path 
-                                RETURN n ORDER BY elementId(n)
+                                RETURN n ORDER BY n.path ASC
                              """
             result = tx.run(query_sub_info, d_id = doc_id, path = path)
             result = list(result)
