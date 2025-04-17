@@ -199,7 +199,6 @@ class RAGQwen25():
 
         shorten_final_dict = OrderedDict(shorten_final_dict)
         shorten_final_dict = OrderedDict(sorted(shorten_final_dict.items(), reverse=True, key=lambda x: scores_dict[x[0]]))
-        shorten_final_dict.popitem()
         # Làm giàu thông tin retrieval data
         def get_sub_nodes(tx, doc_id, path):
             query_sub_info = """ MATCH (n:Doc_Node {d_id: $d_id})
