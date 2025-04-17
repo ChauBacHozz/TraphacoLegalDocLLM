@@ -270,6 +270,8 @@ class RAGQwen25():
                         m_path.add(p["bullet_type"] + " " + p["bullet"])
                     m_path = " ".join(list(m_path))
                     origin_results[-1] = origin_results[-1].rstrip(".;")
+                    if origin_results[-1] != ":":
+                        origin_results[-1] += ";"
                     origin_results[-1] = origin_results[-1] + " (Được " + modified_node["modified_purpose"] + " ở " + m_path + " thuộc văn bản " + modified_node["d_id"] + ");"
             #     final_results.append(modified_nodes)
             if len(path) > 0:
@@ -283,6 +285,8 @@ class RAGQwen25():
                             origin_results[-1] = origin_results[-1] + "\n" + node.metadata["bullet_type"] + " " + node.page_content.strip()
 
                         origin_results[-1] = origin_results[-1].rstrip(".;")
+                        if origin_results[-1] != ":":
+                            origin_results[-1] += ";"
                         modified_nodes = session.read_transaction(get_modified_nodes, node.metadata["d_id"], node.page_content)
                         for modified_node in modified_nodes:
                             modified_results.add(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"] + " nội dung thuộc văn bản " + doc_id + " như sau " + modified_node["content"])
