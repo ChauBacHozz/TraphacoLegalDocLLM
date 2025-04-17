@@ -463,17 +463,6 @@ def save_modified_doc_to_db(new_metadata, driver, doc_type = 1):
             for modified_metadata in modified_metadata_lst:
                 middle_path = modified_metadata["middle_path"]
                 modified_content = modified_metadata["content"]
-                c_bullet = modified_content.split(" ")[0].rstrip(".,:)")
-                if len(c_bullet.split(".")) > 1:
-                    c_bullet_type = "khoản"
-                    c_bullet = c_bullet.split(".")[-1]
-                else:
-                    if c_bullet.isalpha():
-                        c_bullet_type = "điểm"
-                    else:
-                        c_bullet_type = "khoản"
-                path = full_path + str(" > " + middle_path.strip() + " > " + modified_content.strip() + "_(modified_sub_nodes)")
-                tx.run("MERGE (p:Doc_Node:Sub_Modified_Node:Modified_Node {content: $modified_content, d_id: $d_id, bullet: $bullet, bullet_type: $bullet_type, path: $path})", modified_content = modified_content, d_id = d_id, bullet = c_bullet, bullet_type = c_bullet_type, path = path)
                 if len(middle_path.strip()) > 0:
                     path = ""
                     paths = []
@@ -512,12 +501,36 @@ def save_modified_doc_to_db(new_metadata, driver, doc_type = 1):
                         MATCH (q:Doc_Node:C_Node:Modified_Node {id: $id}), (p:Doc_Node:Sub_Modified_Node:Modified_Node {path: $path, d_id: $d_id})
                         MERGE (q)-[:CONTAIN]->(p)
                         """, path = (full_path + (" > " + paths[0])).strip(), d_id = d_id, id = c_node_id)
+                    
+                    c_bullet = modified_content.split(" ")[0].rstrip(".,:)")
+                    if len(c_bullet.split(".")) > 1:
+                        c_bullet_type = "khoản"
+                        c_bullet = c_bullet.split(".")[-1]
+                    else:
+                        if c_bullet.isalpha():
+                            c_bullet_type = "điểm"
+                        else:
+                            c_bullet_type = "khoản"
+                    path = full_path + str(" > " + middle_path.strip() + " > " + modified_content.strip() + "_(modified_sub_nodes)")
+                    tx.run("MERGE (p:Doc_Node:Sub_Modified_Node:Modified_Node {content: $modified_content, d_id: $d_id, bullet: $bullet, bullet_type: $bullet_type, path: $path})", modified_content = modified_content, d_id = d_id, bullet = c_bullet, bullet_type = c_bullet_type, path = path)
+
                     # Kết nối middle path cuối với sub modified node
                     tx.run("""
                         MATCH (p:Doc_Node:Sub_Modified_Node:Modified_Node {path: $path, d_id: $d_id}), (q:Doc_Node:Sub_Modified_Node:Modified_Node {content: $modified_content, d_id: $d_id}) 
                         MERGE (p)-[:CONTAIN]->(q)
                         """, modified_content = modified_content, path = (full_path + (" > " + paths[-1])).strip(), d_id = d_id)
                 else:
+                    c_bullet = modified_content.split(" ")[0].rstrip(".,:)")
+                    if len(c_bullet.split(".")) > 1:
+                        c_bullet_type = "khoản"
+                        c_bullet = c_bullet.split(".")[-1]
+                    else:
+                        if c_bullet.isalpha():
+                            c_bullet_type = "điểm"
+                        else:
+                            c_bullet_type = "khoản"
+                    path = full_path + str(" > " + middle_path.strip() + " > " + modified_content.strip() + "_(modified_sub_nodes)")
+                    tx.run("MERGE (p:Doc_Node:Sub_Modified_Node:Modified_Node {content: $modified_content, d_id: $d_id, bullet: $bullet, bullet_type: $bullet_type, path: $path})", modified_content = modified_content, d_id = d_id, bullet = c_bullet, bullet_type = c_bullet_type, path = path)
                     # Kết nối sub nodes với node ngoài
                     tx.run("""
                         MATCH (p:Doc_Node:Sub_Modified_Node:Modified_Node {content: $modified_content, d_id: $d_id}), (q:Doc_Node:C_Node:Modified_Node {id: $id})

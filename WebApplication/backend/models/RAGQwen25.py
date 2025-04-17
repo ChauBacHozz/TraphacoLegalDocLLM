@@ -70,7 +70,7 @@ class RAGQwen25():
         {context} 
 
         ### Câu hỏi:
-        Trả lời một cách chi tiết câu hỏi sau: {question}. Chỉ trả về văn bản chính xác từ ngữ cảnh mà không cần sửa đổi, có thể xuống dòng giữa các đề mục. Nêu rõ về nội dung bãi bỏ, sửa đổi bổ sung.
+        Trả lời một cách chi tiết câu hỏi sau: {question}.Nêu rõ đề mục và văn bản mà nội dung được trả lời. Chỉ trả về văn bản chính xác từ ngữ cảnh mà không cần sửa đổi, có thể xuống dòng giữa các đề mục. Nêu rõ về nội dung bãi bỏ, sửa đổi bổ sung.
 
         ### Trả lời:'''           # Khởi tạo mô hình LLM và tokenizer
 
@@ -203,7 +203,7 @@ class RAGQwen25():
         def get_sub_nodes(tx, doc_id, path):
             query_sub_info = """ MATCH (n:Doc_Node {d_id: $d_id})
                                 WHERE n.path STARTS WITH $path 
-                                RETURN n ORDER BY n.path ASC
+                                RETURN n ORDER BY elementId(n)
                              """
             result = tx.run(query_sub_info, d_id = doc_id, path = path)
             result = list(result)
@@ -241,7 +241,7 @@ class RAGQwen25():
         def get_modified_sub_nodes(tx, doc_id, content, bullet_type, bullet):
             query = """
             MATCH (b:Doc_Node:Modified_Node {d_id: $d_id, content: $content, bullet_type: $bullet_type, bullet: $bullet})-[:CONTAIN*1..]->(subnodes)
-            RETURN subnodes
+            RETURN subnodes ORDER BY elementId(subnodes)
             """
             result = tx.run(query, d_id = doc_id, content = content, bullet_type = bullet_type, bullet = bullet)
             subnodes = [record["subnodes"] for record in result]
@@ -260,9 +260,9 @@ class RAGQwen25():
                 modified_nodes = session.read_transaction(get_modified_nodes, doc_id, val)
                 for modified_node in modified_nodes:
                     modified_results.add(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"] + " nội dung thuộc văn bản " + doc_id + " như sau " + modified_node["content"])
-                    # modified_sub_nodes = session.read_transaction(get_modified_sub_nodes, modified_node["d_id"], modified_node["content"], modified_node["bullet_type"], modified_node["bullet"])
-                    # for modified_sub_node in modified_sub_nodes:
-                    #     modified_results.add(modified_sub_node["content"])
+                    modified_sub_nodes = session.read_transaction(get_modified_sub_nodes, modified_node["d_id"], modified_node["content"], modified_node["bullet_type"], modified_node["bullet"])
+                    for modified_sub_node in modified_sub_nodes:
+                        modified_results.add(modified_sub_node["content"])
                     m_paths = session.read_transaction(get_modified_path, modified_node["d_id"], modified_node["id"])
                     m_path = OrderedSet()
                     for p in m_paths:
@@ -289,10 +289,9 @@ class RAGQwen25():
                         modified_nodes = session.read_transaction(get_modified_nodes, node.metadata["d_id"], node.page_content)
                         for modified_node in modified_nodes:
                             modified_results.add(modified_node["d_id"] + " " + modified_node["bullet_type"] + " " + modified_node["bullet"] + " | " + modified_node["modified_purpose"] + " nội dung thuộc văn bản " + doc_id + " như sau " + modified_node["content"])
-                            # modified_sub_nodes = session.read_transaction(get_modified_sub_nodes, modified_node["d_id"], modified_node["content"], modified_node["bullet_type"], modified_node["bullet"])
-                            # for modified_sub_node in modified_sub_nodes:
-                            #     modified_results.add(modified_sub_node[
-                            # "content"])
+                            modified_sub_nodes = session.read_transaction(get_modified_sub_nodes, modified_node["d_id"], modified_node["content"], modified_node["bullet_type"], modified_node["bullet"])
+                            for modified_sub_node in modified_sub_nodes:
+                                modified_results.add(modified_sub_node["content"])
                             m_paths = session.read_transaction(get_modified_path, modified_node["d_id"], modified_node["id"])
                             m_path = OrderedSet()
                             for p in m_paths:
