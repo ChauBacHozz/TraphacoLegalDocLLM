@@ -9,6 +9,8 @@ from stqdm import stqdm
 from tqdm import tqdm
 import re
 
+BATCH_SIZE = 50
+
 def save_type1_origin_appendix_to_db(extracted_text, heading, doc_number, driver):
     pass
 
@@ -49,7 +51,7 @@ def save_type1_origin_pre_appendix_to_db(extracted_text, heading, doc_number, dr
     # Preprocess chunks
     metadata_lst = preprocess_chunks(chunks, heading, doc_number)
     # Lưu dữ liệu vào neo4j sử dụng các batch để giảm gánh nặng bộ nhớ
-    batch_size = 10    
+    batch_size = BATCH_SIZE    
     for i in stqdm(range(0, len(metadata_lst), batch_size)):
         save_origin_doc_to_db(metadata_lst[i:i+batch_size], driver)
 
@@ -88,7 +90,7 @@ def save_type1_modified_appendix_to_db(document, heading, doc_number, driver):
     metadata_lst = preprocess_chunks(chunks, heading, doc_number)
 
     # Lưu dữ liệu vào neo4j sử dụng các batch để giảm gánh nặng bộ nhớ
-    batch_size = 10    
+    batch_size = BATCH_SIZE    
     print("☑️ saving appendix data")
     for i in stqdm(range(0, len(metadata_lst), batch_size)):
         save_modified_doc_to_db(metadata_lst[i:i+batch_size], driver)
@@ -127,7 +129,7 @@ def save_type1_modified_pre_appendix_to_db(extracted_text, heading, doc_number, 
     # # Preprocess chunks
     metadata_lst = preprocess_chunks(chunks, heading, doc_number)
     # Lưu dữ liệu vào neo4j sử dụng các batch để giảm gánh nặng bộ nhớ
-    batch_size = 10    
+    batch_size = BATCH_SIZE    
     for i in stqdm(range(0, len(metadata_lst), batch_size)):
         save_modified_doc_to_db(metadata_lst[i:i+batch_size], driver)
 
@@ -165,7 +167,7 @@ def save_type2_origin_appendix_to_db(document, heading, doc_number, driver):
     # Preprocess chunks, trả về danh sách các metadata
     metadata_lst = preprocess_chunks(chunks, heading, doc_number)
     # Lưu dữ liệu vào neo4j sử dụng các batch để giảm gánh nặng bộ nhớ
-    batch_size = 10    
+    batch_size = BATCH_SIZE    
     for i in stqdm(range(0, len(metadata_lst), batch_size)):
         save_origin_doc_to_db(metadata_lst[i:i+batch_size], driver)
 
@@ -203,7 +205,7 @@ def save_type2_origin_pre_appendix_to_db(extracted_text, heading, doc_number, dr
     # Preprocess chunks, trả về danh sách metadata
     metadata_lst = preprocess_chunks(chunks, heading, doc_number)
     # Lưu dữ liệu vào neo4j sử dụng các batch để giảm gánh nặng bộ nhớ
-    batch_size = 10    
+    batch_size = BATCH_SIZE    
     for i in stqdm(range(0, len(metadata_lst), batch_size)):
         save_origin_doc_to_db(metadata_lst[i:i+batch_size], driver)
 
@@ -241,7 +243,7 @@ def save_type2_modified_appendix_to_db(document, heading, doc_number, driver):
     # Preprocess chunks, trả về danh sách các metadata
     metadata_lst = preprocess_chunks(chunks, heading, doc_number)
     # Lưu dữ liệu vào neo4j sử dụng các batch để giảm gánh nặng bộ nhớ
-    batch_size = 10    
+    batch_size = BATCH_SIZE    
     for i in stqdm(range(0, len(metadata_lst), batch_size)):
         save_modified_doc_to_db(metadata_lst[i:i+batch_size], driver) 
 
@@ -282,6 +284,6 @@ def save_type2_modified_pre_appendix_to_db(extracted_text, heading, doc_number, 
     # Lưu dữ liệu vào neo4j sử dụng các batch để giảm gánh nặng bộ nhớ
     for metadata in metadata_lst:
         metadata["modified_doc_id"] = modified_doc_id
-    batch_size = 10    
+    batch_size = BATCH_SIZE    
     for i in stqdm(range(0, len(metadata_lst), batch_size)):
         save_modified_doc_to_db(metadata_lst[i:i+batch_size], driver, doc_type=2)
