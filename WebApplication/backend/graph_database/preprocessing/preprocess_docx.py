@@ -376,7 +376,15 @@ def preprocess_chunks(chunks, heading, doc_number):
         # break
 
             # Combine hierarchical info with content for embedding
-            doc_idx = re.search(f"\d", doc_number)
+            doc_idx = re.search(r"\d", doc_number)
+            # if doc_number is not None:
+            #     doc_idx = re.search(r"\d", doc_number)
+            #     if doc_idx:
+            #         print(doc_idx.group())
+            #     else:
+            #         print("No digit found in doc_number.")
+            # else:
+            #     print("doc_number is None.")
             if doc_idx:
                 doc_id = doc_number[doc_idx.start():]
                 

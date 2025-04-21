@@ -84,6 +84,7 @@ if st.button("Upload to database"):
             pre_appendix_text = extracted_text
         # Trích xuất thông tin tiêu đề văn bản và mã văn bản
         doc_number = doc_file.tables[0].rows[1].cells[0].text
+        print("Uploading", upload_file, "with doc number", doc_number)
         heading = ": ".join(extracted_text[:2])
 
         # Kiểm tra nếu văn bản có là thông tư nghị định hay không (loại 1)
