@@ -1,7 +1,5 @@
-from langchain.vectorstores import FAISS
 from langchain.embeddings import GPT4AllEmbeddings
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
-from langchain_community.embeddings import GPT4AllEmbeddings
 from langchain_community.vectorstores import FAISS
 from transformers import BitsAndBytesConfig
 from sentence_transformers import SentenceTransformer, CrossEncoder
@@ -11,7 +9,6 @@ import torch
 import faiss
 import numpy as np
 import pickle
-import os
 # from underthesea import word_tokenize
 from langchain_community.vectorstores import Neo4jVector
 from langchain.embeddings import HuggingFaceEmbeddings
