@@ -9,7 +9,6 @@ import torch
 import faiss
 import numpy as np
 import pickle
-# from underthesea import word_tokenize
 from langchain_community.vectorstores import Neo4jVector
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.schema import Document
@@ -18,18 +17,12 @@ from neo4j import GraphDatabase
 from icecream import ic
 from ordered_set import OrderedSet
 from collections import OrderedDict
-import json
 import os
 from pyvi import ViTokenizer
 from transformers import pipeline, set_seed
 
 os.environ["USE_TORCH"] = "1"
 os.environ["USE_TF"] = "0"
-# PATH = 'D:/VS_Workspace/LLM/.cache'
-# os.environ['TRANSFORMERS_CACHE'] = PATH
-# os.environ['HF_HOME'] = PATH
-# os.environ['HF_DATASETS_CACHE'] = PATH
-# os.environ['TORCH_HOME'] = PATH
 
 class RetrievalData():
     def __init__(self,embedding_model = "dangvantuan/vietnamese-document-embedding",
@@ -43,7 +36,7 @@ class RetrievalData():
             model_kwargs={"trust_remote_code": True, "device": "cpu"},)
         
         
-        self.rerank_model = CrossEncoder(rerank_model_id, max_length=4000)
+        self.rerank_model = CrossEncoder(rerank_model_id, max_length=4000, device="cpu")
         self.rerank_model.to("cpu")
 
         URI = "neo4j+s://13d9b8ff.databases.neo4j.io"
