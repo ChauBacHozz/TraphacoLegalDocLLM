@@ -40,7 +40,7 @@ class RetrievalData():
         # if embedding_model == None:
         self.embedding_model = HuggingFaceEmbeddings(
             model_name=embedding_model, 
-            model_kwargs={"trust_remote_code": True},)
+            model_kwargs={"trust_remote_code": True, "device": "cpu"},)
         
         
         self.rerank_model = CrossEncoder(rerank_model_id, max_length=4000)
