@@ -458,7 +458,7 @@ def save_modified_doc_to_db(new_metadata, driver, doc_type = 1):
 
 
     def create_graph(tx, metadata):
-        def create_modified_sub_nodes(tx, modified_metadata_lst, d_id, c_node_id, full_path):
+        def create_modified_sub_nodes(tx, modified_metadata_lst, d_id, c_node_id, full_path, intro_sentence_to_modified_content):
             
             for modified_metadata in modified_metadata_lst:
                 middle_path = modified_metadata["middle_path"]
@@ -487,7 +487,11 @@ def save_modified_doc_to_db(new_metadata, driver, doc_type = 1):
                                     m_bullet_type = "điểm"
                                 else:
                                     m_bullet_type = "khoản"
-                        tx.run("MERGE (p:Doc_Node:Sub_Modified_Node:Modified_Node {content: $content, d_id: $d_id, bullet: $bullet, bullet_type: $bullet_type, path: $path})", content = m_path.strip(), d_id = d_id, bullet = m_bullet, bullet_type = m_bullet_type, path = (full_path + str(" > " + path)).strip())
+                        if i == 0:
+                            tx.run("MERGE (p:Doc_Node:Sub_Modified_Node:Modified_Node {content: $content, d_id: $d_id, bullet: $bullet, bullet_type: $bullet_type, path: $path})", 
+                                   content = intro_sentence_to_modified_content + "\n" + m_path.strip(), d_id = d_id, bullet = m_bullet, bullet_type = m_bullet_type, path = (full_path + str(" > " + path)).strip())
+                        else:
+                            tx.run("MERGE (p:Doc_Node:Sub_Modified_Node:Modified_Node {content: $content, d_id: $d_id, bullet: $bullet, bullet_type: $bullet_type, path: $path})", content = m_path.strip(), d_id = d_id, bullet = m_bullet, bullet_type = m_bullet_type, path = (full_path + str(" > " + path)).strip())
                         path += " > "
                     
                     for i in range(len(middle_paths_lst) - 1):
@@ -530,7 +534,10 @@ def save_modified_doc_to_db(new_metadata, driver, doc_type = 1):
                         else:
                             c_bullet_type = "khoản"
                     path = full_path + str(" > " + middle_path.strip() + " > " + modified_content.strip() + "_(modified_sub_nodes)")
-                    tx.run("MERGE (p:Doc_Node:Sub_Modified_Node:Modified_Node {content: $modified_content, d_id: $d_id, bullet: $bullet, bullet_type: $bullet_type, path: $path})", modified_content = modified_content, d_id = d_id, bullet = c_bullet, bullet_type = c_bullet_type, path = path)
+                    tx.run("MERGE (p:Doc_Node:Sub_Modified_Node:Modified_Node {content: $content, d_id: $d_id, bullet: $bullet, bullet_type: $bullet_type, path: $path})", 
+                           content = intro_sentence_to_modified_content + "/n" +  modified_content, 
+                           d_id = d_id, bullet = c_bullet, 
+                           bullet_type = c_bullet_type, path = path)
                     # Kết nối sub nodes với node ngoài
                     tx.run("""
                         MATCH (p:Doc_Node:Sub_Modified_Node:Modified_Node {content: $modified_content, d_id: $d_id}), (q:Doc_Node:C_Node:Modified_Node {id: $id})
@@ -591,7 +598,8 @@ def save_modified_doc_to_db(new_metadata, driver, doc_type = 1):
         if modified_doc_id:
             create_virtual_origin_nodes(tx, c_node_id=id, modified_paths=modified_paths, modified_doc_id=modified_doc_id)
         if modified_content:
-            create_modified_sub_nodes(tx, modified_content, root_id, id, full_path)
+            intro_sentence_to_modified_content = content
+            create_modified_sub_nodes(tx, modified_content, root_id, id, full_path, intro_sentence_to_modified_content)
 
         # Connect root node to first middle node
         tx.run("""
